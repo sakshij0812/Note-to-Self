@@ -73,6 +73,41 @@ body{
   border-radius: 16px;
 }
 
+/* Frostier popups */
+.modal{
+  width:min(740px, 94vw);
+  border:none;
+  padding:0;
+  position: relative;
+  overflow: hidden;
+}
+.modal::backdrop{
+  background: radial-gradient(50% 60% at 50% 40%, rgba(0,0,0,0.45), rgba(0,0,0,0.65));
+  backdrop-filter: blur(2px);
+}
+.modal.glass{
+  /* stronger, colder frost */
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10));
+  border: 1px solid rgba(255,255,255,0.38);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
+}
+.modal.glass::before{
+  /* subtle frost crystals + noise */
+  content:"";
+  position:absolute; inset:0;
+  border-radius: inherit;
+  pointer-events:none;
+  background:
+    radial-gradient(120px 80px at 80% -10%, rgba(255,255,255,0.25), transparent 60%),
+    radial-gradient(160px 90px at 10% 110%, rgba(255,255,255,0.18), transparent 60%),
+    url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAQCAYAAAAf8/9hAAAAR0lEQVR42u3UQQkAMAzE0Lr/0x2y6bWwQ2gQkQkq1u8M0zq4z0o9wCk0s9mF0g7F+QJfPv8jQ0cH+O4g2p5sC9K3Zl3J3YgIh8n0b1M6Wl3p8g0wQK0k0wJm3f5wAAz5w0b3d6h0kAAAAASUVORK5CYII=");
+  opacity: 0.35;
+}
+
+/* Header, layout, and buttons */
 .app-header{
   position: sticky; top: env(safe-area-inset-top, 0); z-index:20;
   margin: max(8px, env(safe-area-inset-top)) 12px 8px 12px;
@@ -171,8 +206,6 @@ input:focus, textarea:focus{ border-color: #ffd0f0; box-shadow: 0 0 0 6px rgba(2
 .note-meta .date{ color:#ffe1f6; font-size:12px; opacity:0.8; }
 .note-meta .read-btn{ border:none; background: transparent; color:#20122b; font-weight:800; padding:8px 10px; border-radius:12px; cursor:pointer; background: #fff; }
 
-.modal{ width:min(740px, 94vw); border:none; padding:0; }
-.modal::backdrop{ background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
 .modal .modal-header{
   display:flex; align-items:center; justify-content:space-between; padding:14px 14px 0;
 }

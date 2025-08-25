@@ -1,6 +1,6 @@
 {
-  "name": "Reflection",
-  "short_name": "Reflection",
+  "name": "Time Capsule",
+  "short_name": "Time Capsule",
   "description": "A magical, cozy mailbox to write to yourself and keep your letters among the stars ✨",
   "start_url": "./",
   "scope": "./",
@@ -18,6 +18,18 @@
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/apple-touch-icon.png",
+      "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     }
