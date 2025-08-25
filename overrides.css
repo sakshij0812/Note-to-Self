@@ -18,9 +18,13 @@
 /* Tabs sit right under the safe area */
 .tabs{ margin-top: 4px; }
 
-/* Make sure fixed footer also respects the home indicator area */
+/* Make sure fixed footer also respects the home indicator area and sits LOWER */
 .app-footer{
-  padding-bottom: calc(10px + var(--safe-bottom));
+  /* Anchor to the very bottom and reduce the inner bottom padding so the text sits closer to the edge */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px calc(var(--safe-bottom) + 2px) !important; /* was ~10px + safe area; now tighter */
 }
 
 /* Optional: dialogs align nicely without colliding with top inset */
@@ -92,4 +96,23 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+/* Remove iOS grey tap highlight and any leftover background on interaction */
+#creditLink,
+.app-footer,
+.app-footer *{
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The base stylesheet adds a subtle background on hover/focus; disable it */
+.flip:focus .flip-inner,
+.flip:hover .flip-inner,
+.flip:active .flip-inner{
+  background: transparent !important;   /* kill the greyish selection */
+  box-shadow: none;                     /* optional: remove glow too; keep if you like */
+}
+
+/* Also ensure the credit itself doesn't paint a background from other styles */
+#creditLink .flip-inner{
+  background: transparent !important;
 }
