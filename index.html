@@ -1,179 +1,174 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aurora Inbox</title>
-  <meta name="theme-color" content="#ffbce1" />
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6a7d9" />
+  <title>Aurora Mailbox ✨</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-512.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Aurora Mailbox" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Comfortaa:wght@500;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Global aurora canvas -->
-  <div class="sky" aria-hidden="true">
-    <div class="glow a"></div>
-    <div class="glow b"></div>
-    <div class="glow c"></div>
-    <div class="glow d"></div>
+  <!-- Aurora background magic -->
+  <div class="aurora">
+    <span class="blob b1"></span>
+    <span class="blob b2"></span>
+    <span class="blob b3"></span>
+    <span class="stars"></span>
   </div>
 
-  <!-- Header -->
-  <header class="bar">
+  <header class="app-header glass">
     <div class="brand">
-      <div class="emblem">✿</div>
-      <div class="title">
-        <h1>Aurora Inbox</h1>
-        <p>Sweet notes for future you</p>
-      </div>
+      <span class="logo">🌸</span>
+      <h1>Aurora Mailbox</h1>
     </div>
-
-    <div class="indicators">
-      <span id="repoBadge" class="pill"></span>
-      <span id="connDot" class="dot" title="Sync status"></span>
-      <button id="changeToken" class="icon-btn" aria-label="Change token">🔑</button>
-    </div>
+    <button id="settingsBtn" class="icon-btn" aria-label="Open settings">⚙️</button>
   </header>
 
-  <!-- Tabs -->
-  <nav class="tabs" role="tablist" aria-label="Primary">
-    <button id="composeTab" class="tab active" role="tab" aria-selected="true" aria-controls="composePanel">
-      <span>Compose</span>
-    </button>
-    <button id="inboxTab" class="tab" role="tab" aria-selected="false" aria-controls="inboxPanel">
-      <span>Inbox</span>
-    </button>
-  </nav>
+  <main class="container">
+    <!-- Tabs -->
+    <nav class="tabs glass">
+      <button class="tab active" data-tab="compose" aria-controls="composePanel">
+        💌 Send Magic
+      </button>
+      <button class="tab" data-tab="inbox" aria-controls="inboxPanel">
+        📚 My Letters
+      </button>
+    </nav>
 
-  <!-- Content -->
-  <main class="wrap">
-    <!-- Compose -->
-    <section id="composePanel" class="panel active" role="tabpanel" aria-labelledby="composeTab">
-      <article class="glass card">
-        <header class="card-head">
-          <h2>Write a tiny spell</h2>
-        </header>
-
-        <form id="composeForm" class="form">
-          <label class="field">
-            <span class="label">Title</span>
-            <input id="title" name="title" type="text" required maxlength="120" placeholder="Starlight reminder…" />
-          </label>
-
-          <label class="field">
-            <span class="label">Message</span>
-            <textarea id="body" name="body" rows="8" required placeholder="Whisper to future-you…"></textarea>
-          </label>
-
-          <!-- Desktop/tablet actions -->
-          <div class="actions desktop-only">
-            <button type="submit" class="btn rainbow">Send to myself</button>
-            <button type="button" id="clearForm" class="btn ghost">Clear</button>
-          </div>
-
-          <p class="hint">Private to your device. When a secret key is set, notes sync to your GitHub vault.</p>
-        </form>
-      </article>
+    <!-- Compose Panel -->
+    <section id="composePanel" class="panel active">
+      <div class="card glass">
+        <h2>Write yourself a love note ✨</h2>
+        <label class="field">
+          <span>Title</span>
+          <input id="mailTitle" type="text" placeholder="A tiny sparkle of thought..." maxlength="120" />
+        </label>
+        <label class="field">
+          <span>Body</span>
+          <textarea id="mailBody" rows="8" placeholder="Pour your heart out with glitter and grace..."></textarea>
+        </label>
+        <div class="actions">
+          <button id="sendBtn" class="btn primary">
+            Send with Starlight ✨
+          </button>
+          <button id="clearBtn" class="btn ghost">Clear</button>
+        </div>
+        <p id="composeHint" class="hint">Your note travels to your secret constellation (a JSON file in your GitHub repo) when you press send.</p>
+        <p id="composeStatus" class="status"></p>
+      </div>
     </section>
 
-    <!-- Inbox -->
-    <section id="inboxPanel" class="panel" role="tabpanel" aria-labelledby="inboxTab">
-      <article class="glass card">
-        <header class="card-head row">
-          <h2>Your constellations</h2>
-          <div class="desktop-only">
-            <button id="refreshInbox" class="btn small">Refresh</button>
-            <button id="exportJson" class="btn small ghost">Export JSON</button>
+    <!-- Inbox Panel -->
+    <section id="inboxPanel" class="panel">
+      <div class="inbox-controls">
+        <button id="refreshBtn" class="btn small">Refresh ✨</button>
+        <span id="inboxStatus" class="status"></span>
+      </div>
+      <div id="inboxGrid" class="masonry"></div>
+      <template id="cardTemplate">
+        <article class="note-card glass">
+          <h3 class="note-title"></h3>
+          <p class="note-preview"></p>
+          <div class="note-meta">
+            <span class="date"></span>
+            <button class="read-btn">Open</button>
           </div>
-        </header>
-
-        <div id="emptyState" class="empty">
-          <p>No notes yet. Cast your first ✨ on the Compose tab.</p>
-        </div>
-
-        <div id="inboxList" class="masonry" role="list"></div>
-      </article>
+        </article>
+      </template>
     </section>
   </main>
 
-  <!-- Mobile sticky action bars -->
-  <div id="composeActionBar" class="action-bar" data-for="compose">
-    <button id="sendMobile" class="btn rainbow">Send</button>
-    <button id="clearMobile" class="btn ghost">Clear</button>
-  </div>
-  <div id="inboxActionBar" class="action-bar" data-for="inbox">
-    <button id="refreshMobile" class="btn rainbow">Refresh</button>
-    <button id="exportMobile" class="btn ghost">Export</button>
-  </div>
+  <!-- Reader Modal -->
+  <dialog id="readerModal" class="modal glass">
+    <div class="modal-header">
+      <h3 id="readerTitle">Title</h3>
+      <button id="closeReader" class="icon-btn" aria-label="Close">✖️</button>
+    </div>
+    <article id="readerBody" class="reader-body"></article>
+    <div class="modal-footer">
+      <button id="deleteBtn" class="btn danger">Delete</button>
+      <button id="shareBtn" class="btn">Share</button>
+    </div>
+  </dialog>
 
-  <!-- Floating token FAB on mobile -->
-  <button id="keyFab" class="fab" aria-label="Set GitHub token">🔑</button>
-
-  <!-- Magical token sheet -->
-  <dialog id="tokenDialog" class="sheet" aria-labelledby="tokenTitle">
-    <form id="tokenForm" method="dialog" class="sheet-body">
-      <div class="sheet-aurora"></div>
-      <div class="sheet-content">
-        <div class="stars">✦ ✧ ✦</div>
-        <h2 id="tokenTitle">Unlock your stardust vault</h2>
-        <p class="sub">Paste your secret so Aurora can tuck notes into your GitHub galaxy. It never leaves this device.</p>
-
-        <label class="field">
-          <span class="label">Secret key</span>
-          <div class="token">
-            <input id="tokenInput" type="password" inputmode="text" autocomplete="off" placeholder="ghp_… or github_pat_…" required />
-            <div class="row gap">
-              <button type="button" id="pasteToken" class="chip">Paste</button>
-              <button type="button" id="toggleToken" class="chip">Reveal</button>
-            </div>
-          </div>
-        </label>
-
-        <p class="hint center">Tip: fine‑grained token → Contents: Read & Write for only this repo.</p>
-
-        <div class="sheet-actions">
-          <button id="saveToken" class="btn rainbow" value="save">Save secret</button>
-        </div>
+  <!-- Token Modal -->
+  <dialog id="tokenModal" class="modal glass">
+    <form method="dialog" id="tokenForm" class="token-form">
+      <h3>Welcome to your Aurora Mailbox 🌙</h3>
+      <p class="soft">To let your letters float among the stars, whisper your Magic Key (GitHub token) below.</p>
+      <label class="field">
+        <span>Magic Key</span>
+        <input id="tokenInput" type="password" placeholder="ghp_...sparkly_secret..." autocomplete="off" required />
+      </label>
+      <label class="toggle">
+        <input id="rememberToggle" type="checkbox" />
+        <span>Remember my Magic Key on this device</span>
+      </label>
+      <details class="gentle">
+        <summary>How to conjure a Magic Key</summary>
+        <ol class="steps">
+          <li>Go to GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens.</li>
+          <li>Select your repo, and grant Repository permissions → Contents: Read and write.</li>
+          <li>Copy the token (starts with ghp_ or github_pat_...). Keep it secret, keep it safe.</li>
+        </ol>
+      </details>
+      <div class="actions">
+        <button class="btn primary" id="saveTokenBtn">Begin the magic ✨</button>
       </div>
+      <p class="hint">We keep your secret only on this device. You can remove it anytime in Settings.</p>
     </form>
   </dialog>
 
-  <!-- Update banner -->
-  <div id="updateBanner" class="update" hidden>
-    <span class="update-text">A new Aurora is shimmering ✨</span>
-    <div class="row gap">
-      <button id="updateNow" class="btn small rainbow">Update</button>
-      <button id="updateLater" class="btn small ghost">Later</button>
+  <!-- Settings Modal -->
+  <dialog id="settingsModal" class="modal glass">
+    <div class="modal-header">
+      <h3>Settings ⚙️</h3>
+      <button id="closeSettings" class="icon-btn" aria-label="Close">✖️</button>
     </div>
-  </div>
+    <div class="settings-body">
+      <div class="grid2">
+        <label class="field">
+          <span>Owner</span>
+          <input id="ownerInput" type="text" value="the-rebooted-coder" disabled />
+        </label>
+        <label class="field">
+          <span>Repository</span>
+          <input id="repoInput" type="text" value="magic-mailbox" disabled />
+        </label>
+      </div>
+      <label class="field">
+        <span>Data File Path</span>
+        <input id="pathInput" type="text" value="data/emails.json" disabled />
+      </label>
+      <label class="field">
+        <span>Branch</span>
+        <input id="branchInput" type="text" value="main" disabled />
+      </label>
 
-  <!-- Footer -->
-  <footer class="foot" role="contentinfo">
-    <button id="footerFlip" class="flip" aria-pressed="false" aria-label="Toggle footer message">
-      <span class="flip-inner">
-        <span class="face front">
-          <span class="tag">&lt;/&gt;</span>
-          <span class="with">with 🪄 by</span>
-          <img class="sig" src="icons/spandan-signature.png" alt="Spandan" />
-        </span>
-        <span class="face back" aria-hidden="true">An S² Labs Product</span>
-      </span>
-    </button>
+      <div class="sep"></div>
+
+      <div class="grid2">
+        <button id="reenterTokenBtn" class="btn">Re-enter Magic Key</button>
+        <button id="forgetTokenBtn" class="btn danger">Forget Magic Key</button>
+      </div>
+    </div>
+  </dialog>
+
+  <footer class="app-footer">
+    <p>Made with stardust and kindness ✨</p>
   </footer>
 
-  <!-- Toast -->
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-  <script type="module" src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(console.warn);
-      });
-    }
-  </script>
+  <script src="app.js" type="module"></script>
 </body>
 </html>

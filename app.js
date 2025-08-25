@@ -1,437 +1,361 @@
-// Aurora Inbox - fully redesigned UI, same functionality
-// Mobile & iPad-first, Aurora aesthetic, magical dialogs, update banner, footer flip.
-//
-// Configure your repository here. Token is asked on first run and stored locally.
-const CONFIG = {
-  owner: "sakshij0812",  
-  repo: "Note-to-Self-Data",
-  branch: "main",
-  path: "emails.json"
-};
+// Aurora Mailbox – PWA using GitHub Contents API as a cozy store ✨
 
-const STORAGE_KEYS = {
-  token: "auroraInbox.token",
-  cache: "auroraInbox.emailsCache"
-};
+// Hardcoded constellation (change in code if you like)
+/* Per your request these are hardcoded. Ensure the repo exists and you (the token) have access:
+   - Repository permission → Contents: Read and write
+*/
+const OWNER = 'sakshij0812';
+const REPO = 'Note-to-Self-Data';
+const BRANCH = 'main';
+const FILE_PATH = 'data/emails.json';
 
-// Shortcuts
-const qs = (s, el = document) => el.querySelector(s);
-const qsa = (s, el = document) => [...el.querySelectorAll(s)];
+const GH_API = 'https://api.github.com';
+const API_HEADERS = (token) => ({
+  'Accept': 'application/vnd.github+json',
+  'Authorization': `token ${token}`,
+  'X-GitHub-Api-Version': '2022-11-28',
+});
 
-// State
-const state = {
-  emails: [],
-  fileSha: null,
-  token: null,
-  unreadLocal: new Set()
-};
+let magicToken = null; // lives in memory
+let emails = []; // local cache
+let currentSha = null; // sha of the JSON file (if exists)
+let openedIndex = null;
 
-// UI refs
-const ui = {
-  // tabs
-  composeTab: qs("#composeTab"),
-  inboxTab: qs("#inboxTab"),
-  composePanel: qs("#composePanel"),
-  inboxPanel: qs("#inboxPanel"),
+// Helpers
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const encode64 = (str) => btoa(unescape(encodeURIComponent(str)));
+const decode64 = (b64) => decodeURIComponent(escape(atob(b64)));
+const datePretty = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
-  // forms
-  composeForm: qs("#composeForm"),
-  clearForm: qs("#clearForm"),
-
-  // inbox
-  inboxList: qs("#inboxList"),
-  emptyState: qs("#emptyState"),
-  refreshInbox: qs("#refreshInbox"),
-  exportJson: qs("#exportJson"),
-
-  // mobile bars
-  composeBar: qs("#composeActionBar"),
-  inboxBar: qs("#inboxActionBar"),
-  sendMobile: qs("#sendMobile"),
-  clearMobile: qs("#clearMobile"),
-  refreshMobile: qs("#refreshMobile"),
-  exportMobile: qs("#exportMobile"),
-
-  // header indicators
-  repoBadge: qs("#repoBadge"),
-  connDot: qs("#connDot"),
-  changeToken: qs("#changeToken"),
-  keyFab: qs("#keyFab"),
-
-  // token dialog
-  tokenDialog: qs("#tokenDialog"),
-  tokenForm: qs("#tokenForm"),
-  tokenInput: qs("#tokenInput"),
-  pasteToken: qs("#pasteToken"),
-  toggleToken: qs("#toggleToken"),
-  saveToken: qs("#saveToken"),
-
-  // update banner
-  updateBanner: qs("#updateBanner"),
-  updateNow: qs("#updateNow"),
-  updateLater: qs("#updateLater"),
-
-  // footer
-  footerFlip: qs("#footerFlip"),
-
-  // toast
-  toast: qs("#toast"),
-};
-
-// Utilities
-const nowIso = () => new Date().toISOString();
-const niceDate = (iso) => new Date(iso).toLocaleString();
-
-// Robust base64 utils for unicode
-const enc = new TextEncoder();
-const dec = new TextDecoder();
-const encodeBase64 = (str) => btoa(String.fromCharCode(...enc.encode(str)));
-const decodeBase64 = (b64) => dec.decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
-
-function toast(msg, ms = 2200) {
-  ui.toast.textContent = msg;
-  ui.toast.classList.add("show");
-  setTimeout(() => ui.toast.classList.remove("show"), ms);
+// Token storage
+function loadToken() {
+  const remembered = localStorage.getItem('magicToken');
+  if (remembered) return remembered;
+  return null;
+}
+function saveToken(token, remember) {
+  magicToken = token;
+  if (remember) localStorage.setItem('magicToken', token);
+}
+function forgetToken() {
+  magicToken = null;
+  localStorage.removeItem('magicToken');
 }
 
-// Local cache
-function saveLocal() {
-  localStorage.setItem(STORAGE_KEYS.cache, JSON.stringify({ version: 1, updatedAt: nowIso(), emails: state.emails }));
-}
-function loadLocal() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.cache);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (Array.isArray(data)) state.emails = data;
-    else if (data && Array.isArray(data.emails)) state.emails = data.emails;
-  } catch {}
-}
-
-// Token handling
-function getStoredToken() { try { return localStorage.getItem(STORAGE_KEYS.token) || null; } catch { return null; } }
-function setToken(token) {
-  state.token = token;
-  try { localStorage.setItem(STORAGE_KEYS.token, token); } catch {}
-  document.body.dataset.ghToken = token ? "set" : "unset";
-}
-function clearToken() {
-  state.token = null;
-  try { localStorage.removeItem(STORAGE_KEYS.token); } catch {}
-  document.body.dataset.ghToken = "unset";
-}
-async function ensureToken() {
-  const t = getStoredToken();
-  if (t) { setToken(t); return true; }
-  return new Promise((resolve) => {
-    ui.tokenDialog.addEventListener("cancel", (e) => e.preventDefault(), { once: true });
-    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
-    ui.tokenInput.focus();
-    const onSubmit = (e) => {
-      e.preventDefault();
-      const token = ui.tokenInput.value.trim();
-      if (!token) return;
-      setToken(token);
-      ui.tokenDialog.close?.();
-      ui.tokenDialog.removeAttribute("open");
-      ui.tokenForm.removeEventListener("submit", onSubmit);
-      toast("Secret saved ✨");
-      resolve(true);
-    };
-    ui.tokenForm.addEventListener("submit", onSubmit);
-  });
-}
-
-// GitHub API
-async function githubGetFile() {
-  const { owner, repo, path, branch } = CONFIG;
-  if (!state.token) throw new Error("Missing token");
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${state.token}`,
-      "X-GitHub-Api-Version": "2022-11-28"
-    }
-  });
-  if (res.status === 404) return { exists: false };
-  if (!res.ok) throw new Error(`GitHub GET failed: ${res.status}`);
-  const json = await res.json();
-  return { exists: true, sha: json.sha, content: decodeBase64(json.content || "") };
-}
-
-async function githubPutFile(contentText, message, existingSha = null) {
-  const { owner, repo, path, branch } = CONFIG;
-  if (!state.token) throw new Error("Missing token");
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
-  const body = { message, content: encodeBase64(contentText), branch };
-  if (existingSha) body.sha = existingSha;
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${state.token}`,
-      "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28"
-    },
-    body: JSON.stringify(body)
-  });
+// GitHub Contents API: get file
+async function getEmailsFile() {
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(FILE_PATH)}?ref=${encodeURIComponent(BRANCH)}`;
+  const res = await fetch(url, { headers: API_HEADERS(magicToken) });
+  if (res.status === 404) {
+    currentSha = null;
+    return { exists: false, emails: [] };
+  }
   if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`GitHub PUT failed: ${res.status} ${errText}`);
+    const t = await res.text();
+    throw new Error(`Could not reach your constellation: ${res.status} ${t}`);
   }
   const json = await res.json();
-  return { content: json.content, commit: json.commit, sha: json.content?.sha };
+  currentSha = json.sha || null;
+  const content = decode64(json.content || '');
+  try {
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed)) {
+      return { exists: true, emails: parsed };
+    }
+    return { exists: true, emails: [] };
+  } catch {
+    return { exists: true, emails: [] };
+  }
 }
 
-// Data
-async function fetchEmails() {
-  loadLocal();
-  renderInbox();
-  ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
-  ui.connDot.style.background = "#b86fff";
+// GitHub Contents API: put file
+async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 💌') {
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(FILE_PATH)}`;
+  const body = {
+    message,
+    content: encode64(JSON.stringify(nextEmails, null, 2)),
+    branch: BRANCH,
+  };
+  if (currentSha) body.sha = currentSha;
 
-  if (!state.token) { ui.connDot.style.background = "#ffcc66"; return; }
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      ...API_HEADERS(magicToken),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
 
-  try {
-    const file = await githubGetFile();
-    if (!file.exists) {
-      state.emails = [];
-      state.fileSha = null;
-      saveLocal();
-      renderInbox();
-      ui.connDot.style.background = "#ffcc66";
-      return;
-    }
-    const parsed = JSON.parse(file.content || "{}");
-    const emails = Array.isArray(parsed) ? parsed : (parsed.emails || []);
-    state.emails = emails;
-    state.fileSha = file.sha;
-    saveLocal();
-    renderInbox();
-    ui.connDot.style.background = "#7dffb3";
-  } catch (e) {
-    console.warn(e);
-    ui.connDot.style.background = "#ff8888";
-    toast("Failed to fetch from GitHub (using cache)");
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`The stars hesitated: ${res.status} ${t}`);
   }
+  const json = await res.json();
+  currentSha = json.content?.sha || currentSha;
+  return json;
+}
+
+// UI wiring
+function setupTabs() {
+  const tabs = $$('.tab');
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.getAttribute('data-tab');
+      $$('.panel').forEach(p => p.classList.remove('active'));
+      if (tab === 'compose') {
+        $('#composePanel').classList.add('active');
+      } else {
+        $('#inboxPanel').classList.add('active');
+        refreshInbox();
+      }
+    });
+  });
+}
+
+function sparkleStatus(el, msg, kind = 'info') {
+  el.textContent = msg;
+  el.style.color = kind === 'error' ? '#ffb8c8' : '#ffd7ff';
 }
 
 function renderInbox() {
-  const list = ui.inboxList;
-  list.innerHTML = "";
-  const emails = [...state.emails].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-  if (!emails.length) { ui.emptyState.style.display = "block"; return; }
-  ui.emptyState.style.display = "none";
-
-  for (const mail of emails) {
-    const item = document.createElement("article");
-    item.className = "mail";
-    item.setAttribute("role", "listitem");
-    item.tabIndex = 0;
-
-    if (state.unreadLocal.has(mail.id)) {
-      const badge = document.createElement("span");
-      badge.className = "badge";
-      badge.textContent = "NEW";
-      item.appendChild(badge);
-    }
-
-    const h3 = document.createElement("h3");
-    h3.textContent = mail.title || "(Untitled)";
-    const time = document.createElement("time");
-    time.dateTime = mail.createdAt || "";
-    time.textContent = niceDate(mail.createdAt || nowIso());
-    const body = document.createElement("p");
-    body.textContent = mail.body || "";
-
-    item.append(h3, time, body);
-    item.addEventListener("click", () => openMail(mail));
-    item.addEventListener("keypress", (e) => { if (e.key === "Enter") openMail(mail); });
-    list.appendChild(item);
-  }
-}
-
-function openMail(mail) {
-  state.unreadLocal.delete(mail.id);
-  const dlg = document.createElement("dialog");
-  dlg.className = "sheet";
-  dlg.innerHTML = `
-    <form method="dialog" class="sheet-body">
-      <div class="sheet-aurora"></div>
-      <div class="sheet-content">
-        <div class="stars">✦ ✧ ✦</div>
-        <h2>${escapeHtml(mail.title || "(Untitled)")}</h2>
-        <p class="sub">${niceDate(mail.createdAt || nowIso())}</p>
-        <div style="white-space: pre-wrap; color: var(--muted); margin-top: 6px;">${escapeHtml(mail.body || "")}</div>
-        <div class="sheet-actions">
-          <button class="btn ghost" value="close">Close</button>
-        </div>
-      </div>
-    </form>
-  `;
-  document.body.appendChild(dlg);
-  dlg.addEventListener("close", () => dlg.remove());
-  dlg.showModal?.() || dlg.setAttribute("open", "");
-  renderInbox();
-}
-
-function escapeHtml(str){return (str||"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]))}
-
-function clearCompose(){ ui.composeForm.reset(); }
-
-function genId(){ return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`; }
-
-async function handleSend(e){
-  e?.preventDefault?.();
-  const title = ui.composeForm.title.value.trim();
-  const body = ui.composeForm.body.value.trim();
-  if(!title || !body){ toast("Please fill in title and message"); return; }
-
-  const email = { id: genId(), title, body, createdAt: nowIso() };
-  state.emails.push(email);
-  saveLocal();
-  state.unreadLocal.add(email.id);
-  renderInbox();
-
-  if(!state.token){
-    toast("Saved locally. Add your secret to sync ✨");
-    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open",""); 
+  const grid = $('#inboxGrid');
+  grid.innerHTML = '';
+  if (!emails.length) {
+    grid.innerHTML = `
+      <div class="card glass" style="padding:16px; text-align:center;">
+        <p>No letters yet. Your sky awaits its first sparkle 💖</p>
+      </div>`;
     return;
   }
+  // Show most recent first
+  const list = [...emails].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const tpl = $('#cardTemplate');
 
-  const payload = { version:1, updatedAt: nowIso(), emails: state.emails };
-  const contentText = JSON.stringify(payload, null, 2);
-  const msg = `Add note: ${title.slice(0,64)}`;
+  list.forEach((e, idx) => {
+    const node = tpl.content.cloneNode(true);
+    const card = $('.note-card', node);
+    $('.note-title', node).textContent = e.title || '(Untitled)';
+    $('.note-preview', node).textContent = (e.body || '').slice(0, 200);
+    $('.date', node).textContent = datePretty(e.createdAt || new Date().toISOString());
+    $('.read-btn', node).addEventListener('click', () => openReader(e, idx));
+    grid.appendChild(node);
+    // sprinkle pastel accents
+    const hues = ['#ffd9f2', '#e3d5ff', '#caffff', '#ffe7c2'];
+    const pick = hues[idx % hues.length];
+    card.style.border = '1px solid rgba(255,255,255,0.35)';
+    card.style.backgroundImage = `radial-gradient(220px 90px at 90% -10%, ${pick}55, transparent 60%)`;
+  });
+}
 
-  try{
-    try{ const file = await githubGetFile(); state.fileSha = file.exists ? file.sha : null; }catch{}
-    const put = await githubPutFile(contentText, msg, state.fileSha);
-    state.fileSha = put.sha || state.fileSha;
-    toast("Sent and saved to GitHub ✓");
-    clearCompose();
-    ui.connDot.style.background = "#7dffb3";
-  }catch(err){
-    console.warn(err);
-    toast("Saved locally. GitHub sync failed.");
-    ui.connDot.style.background = "#ff8888";
+async function refreshInbox() {
+  const status = $('#inboxStatus');
+  sparkleStatus(status, 'Calling friendly fireflies...');
+  try {
+    const res = await getEmailsFile();
+    emails = res.emails;
+    sparkleStatus(status, `Fetched ${emails.length} letters ✨`);
+    renderInbox();
+  } catch (e) {
+    sparkleStatus(status, e.message, 'error');
   }
 }
 
-function exportJson(){
-  const payload = { version:1, updatedAt: nowIso(), emails: state.emails };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = "emails.json"; a.click(); URL.revokeObjectURL(url);
+function openReader(email, index) {
+  openedIndex = index;
+  $('#readerTitle').textContent = email.title || '(Untitled)';
+  $('#readerBody').textContent = email.body || '';
+  const dlg = $('#readerModal');
+  if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
 }
 
-// Service worker update prompt
-function setupUpdateBanner(){
-  if(!("serviceWorker" in navigator)) return;
-
-  navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
-
-  window.addEventListener("load", async () => {
-    const reg = await navigator.serviceWorker.getRegistration();
-    if(!reg) return;
-
-    const show = () => { ui.updateBanner.hidden = false; requestAnimationFrame(()=> ui.updateBanner.classList.add("show")); };
-    const hide = () => { ui.updateBanner.classList.remove("show"); setTimeout(()=> ui.updateBanner.hidden = true, 200); };
-    const prompt = () => {
-      if(!reg.waiting) return;
-      show();
-      ui.updateNow.onclick = () => { ui.updateNow.disabled = true; ui.updateNow.textContent = "Updating…"; reg.waiting.postMessage({type:"SKIP_WAITING"}); };
-      ui.updateLater.onclick = () => hide();
-    };
-
-    if(reg.waiting) prompt();
-    reg.addEventListener("updatefound", () => {
-      const sw = reg.installing;
-      if(!sw) return;
-      sw.addEventListener("statechange", ()=> {
-        if(sw.state === "installed" && navigator.serviceWorker.controller) prompt();
-      });
-    });
-
-    setInterval(()=> reg.update(), 30*60*1000);
-    document.addEventListener("visibilitychange", ()=> { if(document.visibilityState === "visible") reg.update(); });
-  });
+function closeReader() {
+  const dlg = $('#readerModal');
+  if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
+  openedIndex = null;
 }
 
-// Bind UI
-function bind(){
-  // Tabs
-  ui.composeTab.addEventListener("click", ()=> switchTab("compose"));
-  ui.inboxTab.addEventListener("click", ()=> switchTab("inbox"));
-
-  // Compose
-  ui.composeForm.addEventListener("submit", handleSend);
-  ui.clearForm?.addEventListener("click", clearCompose);
-
-  // Inbox
-  ui.refreshInbox?.addEventListener("click", fetchEmails);
-  ui.exportJson?.addEventListener("click", exportJson);
-
-  // Mobile actions
-  ui.sendMobile.addEventListener("click", handleSend);
-  ui.clearMobile.addEventListener("click", clearCompose);
-  ui.refreshMobile.addEventListener("click", fetchEmails);
-  ui.exportMobile.addEventListener("click", exportJson);
-
-  // Token helpers
-  ui.toggleToken.addEventListener("click", ()=>{
-    const el = ui.tokenInput;
-    el.type = el.type === "password" ? "text" : "password";
-    ui.toggleToken.textContent = el.type === "password" ? "Reveal" : "Hide";
-  });
-  ui.pasteToken.addEventListener("click", async ()=>{
-    try{ const t = await navigator.clipboard.readText(); if(t){ ui.tokenInput.value = t.trim(); toast("Pasted ✨"); } }
-    catch{ toast("Clipboard not available"); }
-  });
-  ui.changeToken.addEventListener("click", ()=>{
-    ui.tokenInput.value = "";
-    clearToken();
-    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open","");
-  });
-  ui.keyFab.addEventListener("click", ()=>{
-    ui.tokenInput.value = getStoredToken() || "";
-    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open","");
-    ui.tokenInput.focus();
-  });
-
-  // Footer flip
-  ui.footerFlip?.addEventListener("click", ()=>{
-    const flipped = ui.footerFlip.classList.toggle("flipped");
-    ui.footerFlip.setAttribute("aria-pressed", String(flipped));
-    if(navigator.vibrate) try{ navigator.vibrate(10); }catch{}
-  });
-
-  setupUpdateBanner();
-}
-
-function switchTab(which){
-  const entries = [
-    ["compose", ui.composeTab, ui.composePanel, ui.composeBar],
-    ["inbox", ui.inboxTab, ui.inboxPanel, ui.inboxBar]
-  ];
-  for(const [name, tab, panel, bar] of entries){
-    const active = name === which;
-    tab.classList.toggle("active", active);
-    tab.setAttribute("aria-selected", String(active));
-    panel.classList.toggle("active", active);
-    if(window.matchMedia("(min-width: 960px)").matches) bar.style.display = "none";
-    else bar.style.display = active ? "flex" : "none";
+function shareCurrent() {
+  if (openedIndex == null) return;
+  const e = emails[openedIndex];
+  const text = `💌 ${e.title}\n\n${e.body}`;
+  if (navigator.share) {
+    navigator.share({ title: e.title || 'Aurora Mail', text });
+  } else {
+    navigator.clipboard.writeText(text);
+    alert('Copied to clipboard ✨');
   }
+}
+
+async function deleteCurrent() {
+  if (openedIndex == null) return;
+  if (!confirm('Gently release this letter into the night?')) return;
+  const composeStatus = $('#composeStatus');
+  try {
+    const res = await getEmailsFile();
+    const list = res.emails;
+    const target = emails[openedIndex];
+    const after = list.filter(x => x.id !== target.id);
+    await putEmailsFile(after, 'chore: release a letter into the night 🌙');
+    emails = after;
+    renderInbox();
+    closeReader();
+    sparkleTrail();
+    sparkleStatus(composeStatus, 'Letter released with grace 🌙');
+  } catch (e) {
+    alert('The stars murmured: ' + e.message);
+  }
+}
+
+function sparkleTrail() {
+  // Tiny ephemeral sparkle effect near the send button
+  const btn = $('#sendBtn');
+  if (!btn) return;
+  const burst = document.createElement('span');
+  burst.className = 'burst';
+  burst.innerHTML = '✨';
+  const rect = btn.getBoundingClientRect();
+  burst.style.position = 'fixed';
+  burst.style.left = `${rect.left + rect.width/2}px`;
+  burst.style.top = `${rect.top}px`;
+  burst.style.pointerEvents = 'none';
+  burst.style.animation = 'burst 800ms ease forwards';
+  document.body.appendChild(burst);
+  setTimeout(() => burst.remove(), 900);
+}
+const style = document.createElement('style');
+style.textContent = `
+@keyframes burst { from { transform: translate(-50%, -10px) scale(0.8); opacity: 0 } 30% { opacity:1 } to { transform: translate(-50%, -60px) scale(1.2); opacity: 0 } }
+`;
+document.head.appendChild(style);
+
+// Compose actions
+async function onSend() {
+  const title = $('#mailTitle').value.trim();
+  const body = $('#mailBody').value.trim();
+  const status = $('#composeStatus');
+  if (!title && !body) {
+    sparkleStatus(status, 'Write a little something lovely first ✨', 'error');
+    return;
+  }
+  if (!magicToken) {
+    openTokenModal(true);
+    sparkleStatus(status, 'We need your Magic Key to send this note ✨', 'error');
+    return;
+  }
+  $('#sendBtn').disabled = true;
+  sparkleStatus(status, 'Sending with stardust…');
+
+  const newEmail = {
+    id: crypto.randomUUID(),
+    title,
+    body,
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    const res = await getEmailsFile();
+    const next = [...res.emails, newEmail];
+    await putEmailsFile(next, 'chore: add a magical letter 💌');
+    emails = next;
+    renderInbox();
+    sparkleStatus(status, 'Your letter is shining in the night sky ✨');
+    sparkleTrail();
+    $('#mailTitle').value = '';
+    $('#mailBody').value = '';
+    // switch to inbox
+    $$('[data-tab]').forEach(b => b.classList.remove('active'));
+    $$('[data-tab="inbox"]')[0].classList.add('active');
+    $$('.panel').forEach(p => p.classList.remove('active'));
+    $('#inboxPanel').classList.add('active');
+  } catch (e) {
+    // Friendly guidance if token is read-only
+    if (String(e.message).includes('403')) {
+      sparkleStatus(status, 'Your Magic Key can read the stars but not write. Grant “Contents: Read and write” to your token and try again 💫', 'error');
+    } else if (String(e.message).includes('404')) {
+      sparkleStatus(status, 'Could not find your constellation (repo or branch). Make sure it exists ✨', 'error');
+    } else {
+      sparkleStatus(status, e.message, 'error');
+    }
+  } finally {
+    $('#sendBtn').disabled = false;
+  }
+}
+
+function onClear() {
+  $('#mailTitle').value = '';
+  $('#mailBody').value = '';
+  $('#composeStatus').textContent = '';
+}
+
+// Token modal
+function openTokenModal(force = false) {
+  const dlg = $('#tokenModal');
+  if (force || !magicToken) {
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else dlg.setAttribute('open', '');
+  }
+}
+function closeTokenModal() {
+  const dlg = $('#tokenModal');
+  if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
+}
+
+function setupSettings() {
+  $('#settingsBtn').addEventListener('click', () => {
+    $('#settingsModal').showModal();
+  });
+  $('#closeSettings').addEventListener('click', () => {
+    $('#settingsModal').close();
+  });
+  $('#reenterTokenBtn').addEventListener('click', () => {
+    $('#settingsModal').close();
+    openTokenModal(true);
+  });
+  $('#forgetTokenBtn').addEventListener('click', () => {
+    if (confirm('Forget your Magic Key on this device?')) {
+      forgetToken();
+      alert('Magic Key forgotten. You’ll be asked again next time ✨');
+    }
+  });
 }
 
 // Init
-async function init(){
-  ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
-  bind();
-  switchTab("compose");
-  await ensureToken();
-  await fetchEmails();
-}
+window.addEventListener('DOMContentLoaded', () => {
+  // Token
+  const remembered = loadToken();
+  if (remembered) magicToken = remembered;
+  else openTokenModal(false);
 
-init();
+  // Events
+  setupTabs();
+  setupSettings();
+
+  $('#saveTokenBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const t = $('#tokenInput').value.trim();
+    const remember = $('#rememberToggle').checked;
+    if (!t) return;
+    saveToken(t, remember);
+    closeTokenModal();
+    refreshInbox();
+  });
+
+  $('#sendBtn').addEventListener('click', onSend);
+  $('#clearBtn').addEventListener('click', onClear);
+  $('#refreshBtn').addEventListener('click', refreshInbox);
+  $('#closeReader').addEventListener('click', closeReader);
+  $('#shareBtn').addEventListener('click', shareCurrent);
+  $('#deleteBtn').addEventListener('click', deleteCurrent);
+
+  // Preload inbox if token present
+  if (magicToken) refreshInbox();
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+});
