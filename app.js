@@ -369,6 +369,12 @@ function renderInbox() {
 
 async function refreshInbox() {
   const status = $('#inboxStatus');
+  // If offline, render whatever we have cached and inform the user
+  if (!navigator.onLine) {
+    sparkleStatus(status, 'You are offline. Showing cached letters (if any).');
+    renderInbox();
+    return;
+  }
   sparkleStatus(status, 'Calling friendly fireflies...');
   try {
     const res = await getEmailsFile();
@@ -461,11 +467,86 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+/* ---------- Offline handling: dialog + disable adding ---------- */
+function ensureOfflineModal() {
+  let dlg = $('#offlineModal');
+  if (dlg) return dlg;
+
+  dlg = document.createElement('dialog');
+  dlg.id = 'offlineModal';
+  dlg.className = 'modal glass';
+  dlg.innerHTML = `
+    <div class="modal-header">
+      <h3>You're offline</h3>
+      <button id="closeOffline" class="icon-btn" aria-label="Close">✖️</button>
+    </div>
+    <article class="reader-body">
+      <p>No internet connection detected.</p>
+      <p>Sending letters and adding photos are disabled until you're back online.</p>
+    </article>
+    <div class="modal-footer">
+      <button id="retryOnlineBtn" class="btn primary">Try again</button>
+    </div>
+  `;
+  document.body.appendChild(dlg);
+
+  $('#closeOffline')?.addEventListener('click', () => {
+    if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
+  });
+  $('#retryOnlineBtn')?.addEventListener('click', () => {
+    if (navigator.onLine) {
+      closeOfflineModal();
+      refreshInbox();
+    }
+  });
+
+  return dlg;
+}
+function openOfflineModal() {
+  const dlg = ensureOfflineModal();
+  if (!dlg) return;
+  if (typeof dlg.showModal === 'function') {
+    if (!dlg.open) dlg.showModal();
+  } else {
+    dlg.setAttribute('open', '');
+  }
+}
+function closeOfflineModal() {
+  const dlg = $('#offlineModal');
+  if (!dlg) return;
+  if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
+}
+function updateOnlineUI(isOnline) {
+  // Disable sending and adding photos when offline
+  $('#sendBtn')?.toggleAttribute('disabled', !isOnline);
+  $('#addPhotosBtn')?.toggleAttribute('disabled', !isOnline);
+  $('#imageInput')?.toggleAttribute('disabled', !isOnline);
+}
+function handleConnectivityChange() {
+  const isOnline = navigator.onLine;
+  updateOnlineUI(isOnline);
+  const status = $('#composeStatus');
+  if (isOnline) {
+    closeOfflineModal();
+    if (status) sparkleStatus(status, 'Back online ✨');
+  } else {
+    openOfflineModal();
+    if (status) sparkleStatus(status, 'Offline. Sending and photo uploads are disabled.', 'error');
+  }
+}
+
 /* ---------- Compose actions ---------- */
 async function onSend() {
   const title = $('#mailTitle').value.trim();
   const body = $('#mailBody').value.trim();
   const status = $('#composeStatus');
+
+  if (!navigator.onLine) {
+    openOfflineModal();
+    sparkleStatus(status, 'You are offline. Connect to the internet to send this note ✨', 'error');
+    return;
+  }
+
   if (!title && !body && selectedImages.length === 0) {
     sparkleStatus(status, 'Write a little something lovely or add a photo first ✨', 'error');
     return;
@@ -684,7 +765,10 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // Image picker events
-  $('#addPhotosBtn')?.addEventListener('click', () => $('#imageInput').click());
+  $('#addPhotosBtn')?.addEventListener('click', () => {
+    if (!navigator.onLine) { openOfflineModal(); return; }
+    $('#imageInput').click();
+  });
   $('#clearPhotosBtn')?.addEventListener('click', clearSelectedImages);
   $('#imageInput')?.addEventListener('change', (e) => {
     const files = Array.from(e.target.files || []);
@@ -738,4 +822,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Register service worker with "update available" flow
   setupUpdateFlow();
+
+  // Offline/online handling
+  ensureOfflineModal(); // prepare the dialog in DOM
+  handleConnectivityChange(); // set initial state
+  window.addEventListener('online', handleConnectivityChange);
+  window.addEventListener('offline', handleConnectivityChange);
 });
