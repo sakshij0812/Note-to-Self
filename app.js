@@ -39,9 +39,9 @@ function loadToken() {
   if (remembered) return remembered;
   return null;
 }
-function saveToken(token, remember) {
+function saveToken(token) {
   magicToken = token;
-  if (remember) localStorage.setItem('magicToken', token);
+  try { localStorage.setItem('magicToken', token); } catch {}
 }
 function forgetToken() {
   magicToken = null;
@@ -407,9 +407,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#saveTokenBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
     const t = $('#tokenInput').value.trim();
-    const remember = $('#rememberToggle').checked;
     if (!t) return;
-    saveToken(t, remember);
+    saveToken(t); // Always persist to localStorage
     closeTokenModal();
     refreshInbox();
   });
