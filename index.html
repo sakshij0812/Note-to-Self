@@ -2,9 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+
+  <!-- Let iOS/Safari know we support both color schemes -->
+  <meta name="color-scheme" content="light dark" />
+
+  <!-- Dynamic theme colors for browser UI (iOS 15+/Safari, Android Chrome) -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f6ff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0a14" />
+
+  <!-- iOS standalone status bar style (use default for better light mode) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Aurora Mailbox" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f6a7d9" />
-  <title>Aurora Mailbox ✨</title>
+  <title>Reflection ✨</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
@@ -13,17 +25,13 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
   <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
 
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Aurora Mailbox" />
-
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Comfortaa:wght@500;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- 1s magical loading: ONLY star-dust burst (no center circle) -->
+  <!-- 1s loading — pure star-dust burst (stays elegant in both themes) -->
   <div id="loadingScreen" class="loading-screen" aria-hidden="true">
     <div class="stardust-burst" role="img" aria-label="Loading">
       <!-- Tiny white dots flying outwards -->
@@ -61,7 +69,7 @@
     <span class="stars"></span>
   </div>
 
-  <!-- Header removed for ultra-clean top bar -->
+  <!-- No header (clean top) -->
 
   <main class="container">
     <!-- Tabs -->
@@ -87,14 +95,12 @@
           <textarea id="mailBody" rows="8" placeholder="Pour your heart out with glitter and grace..."></textarea>
         </label>
         <div class="actions">
-          <button id="sendBtn" class="btn primary">
-            Send with Starlight ✨
-          </button>
+          <button id="sendBtn" class="btn primary">Send with Starlight ✨</button>
           <button id="clearBtn" class="btn ghost">Clear</button>
         </div>
         <p id="composeHint" class="hint">Your note travels to your secret constellation (a JSON file in your GitHub repo) when you press send.</p>
 
-        <!-- Settings icon below the hint (forced left-aligned) -->
+        <!-- Settings icon below the hint (left-aligned) -->
         <div class="under-hint">
           <button id="settingsBtn" class="icon-chip" aria-label="Open settings">⚙️ Settings</button>
         </div>
@@ -206,5 +212,11 @@
   </footer>
 
   <script src="app.js" type="module"></script>
+  <script>
+    // Hide the star-dust loader after ~1s
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => document.getElementById('loadingScreen')?.classList.add('hide'), 1000);
+    });
+  </script>
 </body>
 </html>
