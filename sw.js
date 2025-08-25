@@ -1,4 +1,7 @@
-const CACHE = "aurora-inbox-v1.0";
+// Aurora Inbox Service Worker - app shell caching with update prompt
+// New SW waits until page asks for activation via SKIP_WAITING to show update banner.
+
+const CACHE = "aurora-inbox-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,39 +9,45 @@ const APP_SHELL = [
   "./app.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
-  "./icons/maskable.svg"
+  "./icons/maskable.svg",
+  "./icons/spandan-signature.png"
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(APP_SHELL)).then(() => self.skipWaiting())
-  );
+  e.waitUntil(caches.open(CACHE).then((c)=>c.addAll(APP_SHELL)));
+  // don't skipWaiting automatically
 });
 
 self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+  e.waitUntil((async ()=>{
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener("message", (event) => {
+  if(event.data && event.data.type === "SKIP_WAITING"){
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  // Don't cache GitHub API or any request with an Authorization header
-  if (url.hostname === "api.github.com") return;
-  if (e.request.headers.get("Authorization")) return;
+  // Do not cache API or authorized requests
+  if(url.hostname === "api.github.com") return;
+  if(e.request.headers.get("Authorization")) return;
 
-  // App shell: stale-while-revalidate
+  // Stale-while-revalidate app-shell
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const fetchPromise = fetch(e.request).then(network => {
-        if (network && network.ok && e.request.method === "GET") {
-          const clone = network.clone();
-          caches.open(CACHE).then(cache => cache.put(e.request, clone));
+    caches.match(e.request).then((cached)=>{
+      const fetchPromise = fetch(e.request).then((net)=>{
+        if(net && net.ok && e.request.method === "GET"){
+          const clone = net.clone();
+          caches.open(CACHE).then((cache)=> cache.put(e.request, clone));
         }
-        return network;
-      }).catch(() => cached);
+        return net;
+      }).catch(()=> cached);
       return cached || fetchPromise;
     })
   );

@@ -1,5 +1,7 @@
-// Aurora Inbox - Token-on-first-run build with magical token sheet, mobile-first actions, update banner, and footer flip
-
+// Aurora Inbox - fully redesigned UI, same functionality
+// Mobile & iPad-first, Aurora aesthetic, magical dialogs, update banner, footer flip.
+//
+// Configure your repository here. Token is asked on first run and stored locally.
 const CONFIG = {
   owner: "sakshij0812",  
   repo: "Note-to-Self-Data",
@@ -12,8 +14,11 @@ const STORAGE_KEYS = {
   cache: "auroraInbox.emailsCache"
 };
 
+// Shortcuts
 const qs = (s, el = document) => el.querySelector(s);
+const qsa = (s, el = document) => [...el.querySelectorAll(s)];
 
+// State
 const state = {
   emails: [],
   fileSha: null,
@@ -21,42 +26,44 @@ const state = {
   unreadLocal: new Set()
 };
 
+// UI refs
 const ui = {
-  tabs: {
-    compose: qs("#composeTab"),
-    inbox: qs("#inboxTab"),
-  },
-  panels: {
-    compose: qs("#composePanel"),
-    inbox: qs("#inboxPanel"),
-  },
-  // compose / inbox
+  // tabs
+  composeTab: qs("#composeTab"),
+  inboxTab: qs("#inboxTab"),
+  composePanel: qs("#composePanel"),
+  inboxPanel: qs("#inboxPanel"),
+
+  // forms
   composeForm: qs("#composeForm"),
   clearForm: qs("#clearForm"),
-  refreshInbox: qs("#refreshInbox"),
-  exportJson: qs("#exportJson"),
+
+  // inbox
   inboxList: qs("#inboxList"),
   emptyState: qs("#emptyState"),
-  repoBadge: qs("#repoBadge"),
-  connDot: qs("#connDot"),
-  toast: qs("#toast"),
+  refreshInbox: qs("#refreshInbox"),
+  exportJson: qs("#exportJson"),
 
-  // mobile action bars
-  composeActionBar: qs("#composeActionBar"),
-  inboxActionBar: qs("#inboxActionBar"),
+  // mobile bars
+  composeBar: qs("#composeActionBar"),
+  inboxBar: qs("#inboxActionBar"),
   sendMobile: qs("#sendMobile"),
   clearMobile: qs("#clearMobile"),
   refreshMobile: qs("#refreshMobile"),
   exportMobile: qs("#exportMobile"),
 
-  // token UX
+  // header indicators
+  repoBadge: qs("#repoBadge"),
+  connDot: qs("#connDot"),
   changeToken: qs("#changeToken"),
   keyFab: qs("#keyFab"),
+
+  // token dialog
   tokenDialog: qs("#tokenDialog"),
   tokenForm: qs("#tokenForm"),
   tokenInput: qs("#tokenInput"),
-  toggleToken: qs("#toggleToken"),
   pasteToken: qs("#pasteToken"),
+  toggleToken: qs("#toggleToken"),
   saveToken: qs("#saveToken"),
 
   // update banner
@@ -66,26 +73,32 @@ const ui = {
 
   // footer
   footerFlip: qs("#footerFlip"),
+
+  // toast
+  toast: qs("#toast"),
 };
 
-const encodeBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
-const decodeBase64 = (b64) => decodeURIComponent(escape(atob(b64)));
+// Utilities
 const nowIso = () => new Date().toISOString();
 const niceDate = (iso) => new Date(iso).toLocaleString();
 
-function showToast(msg, ms = 2200) {
+// Robust base64 utils for unicode
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+const encodeBase64 = (str) => btoa(String.fromCharCode(...enc.encode(str)));
+const decodeBase64 = (b64) => dec.decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+
+function toast(msg, ms = 2200) {
   ui.toast.textContent = msg;
   ui.toast.classList.add("show");
   setTimeout(() => ui.toast.classList.remove("show"), ms);
 }
 
 // Local cache
-function saveLocalEmails() {
-  localStorage.setItem(STORAGE_KEYS.cache, JSON.stringify({
-    version: 1, updatedAt: nowIso(), emails: state.emails
-  }));
+function saveLocal() {
+  localStorage.setItem(STORAGE_KEYS.cache, JSON.stringify({ version: 1, updatedAt: nowIso(), emails: state.emails }));
 }
-function loadLocalEmails() {
+function loadLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.cache);
     if (!raw) return;
@@ -96,9 +109,7 @@ function loadLocalEmails() {
 }
 
 // Token handling
-function getStoredToken() {
-  try { return localStorage.getItem(STORAGE_KEYS.token) || null; } catch { return null; }
-}
+function getStoredToken() { try { return localStorage.getItem(STORAGE_KEYS.token) || null; } catch { return null; } }
 function setToken(token) {
   state.token = token;
   try { localStorage.setItem(STORAGE_KEYS.token, token); } catch {}
@@ -109,18 +120,13 @@ function clearToken() {
   try { localStorage.removeItem(STORAGE_KEYS.token); } catch {}
   document.body.dataset.ghToken = "unset";
 }
-
 async function ensureToken() {
-  const existing = getStoredToken();
-  if (existing) {
-    setToken(existing);
-    return true;
-  }
+  const t = getStoredToken();
+  if (t) { setToken(t); return true; }
   return new Promise((resolve) => {
-    ui.tokenDialog.addEventListener("cancel", (e) => e.preventDefault());
+    ui.tokenDialog.addEventListener("cancel", (e) => e.preventDefault(), { once: true });
     ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
     ui.tokenInput.focus();
-
     const onSubmit = (e) => {
       e.preventDefault();
       const token = ui.tokenInput.value.trim();
@@ -129,7 +135,7 @@ async function ensureToken() {
       ui.tokenDialog.close?.();
       ui.tokenDialog.removeAttribute("open");
       ui.tokenForm.removeEventListener("submit", onSubmit);
-      showToast("Secret saved ✨");
+      toast("Secret saved ✨");
       resolve(true);
     };
     ui.tokenForm.addEventListener("submit", onSubmit);
@@ -143,8 +149,8 @@ async function githubGetFile() {
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
   const res = await fetch(url, {
     headers: {
-      "Accept": "application/vnd.github+json",
-      "Authorization": `Bearer ${state.token}`,
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${state.token}`,
       "X-GitHub-Api-Version": "2022-11-28"
     }
   });
@@ -160,12 +166,11 @@ async function githubPutFile(contentText, message, existingSha = null) {
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
   const body = { message, content: encodeBase64(contentText), branch };
   if (existingSha) body.sha = existingSha;
-
   const res = await fetch(url, {
     method: "PUT",
     headers: {
-      "Accept": "application/vnd.github+json",
-      "Authorization": `Bearer ${state.token}`,
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${state.token}`,
       "Content-Type": "application/json",
       "X-GitHub-Api-Version": "2022-11-28"
     },
@@ -179,25 +184,21 @@ async function githubPutFile(contentText, message, existingSha = null) {
   return { content: json.content, commit: json.commit, sha: json.content?.sha };
 }
 
-// Data flow
+// Data
 async function fetchEmails() {
-  loadLocalEmails();
+  loadLocal();
   renderInbox();
-
   ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
   ui.connDot.style.background = "#b86fff";
 
-  if (!state.token) {
-    ui.connDot.style.background = "#ffcc66";
-    return;
-  }
+  if (!state.token) { ui.connDot.style.background = "#ffcc66"; return; }
 
   try {
     const file = await githubGetFile();
     if (!file.exists) {
       state.emails = [];
       state.fileSha = null;
-      saveLocalEmails();
+      saveLocal();
       renderInbox();
       ui.connDot.style.background = "#ffcc66";
       return;
@@ -206,13 +207,13 @@ async function fetchEmails() {
     const emails = Array.isArray(parsed) ? parsed : (parsed.emails || []);
     state.emails = emails;
     state.fileSha = file.sha;
-    saveLocalEmails();
+    saveLocal();
     renderInbox();
     ui.connDot.style.background = "#7dffb3";
   } catch (e) {
     console.warn(e);
     ui.connDot.style.background = "#ff8888";
-    showToast("Failed to fetch from GitHub (using cache)");
+    toast("Failed to fetch from GitHub (using cache)");
   }
 }
 
@@ -236,15 +237,15 @@ function renderInbox() {
       item.appendChild(badge);
     }
 
-    const title = document.createElement("h3");
-    title.textContent = mail.title || "(Untitled)";
+    const h3 = document.createElement("h3");
+    h3.textContent = mail.title || "(Untitled)";
     const time = document.createElement("time");
     time.dateTime = mail.createdAt || "";
     time.textContent = niceDate(mail.createdAt || nowIso());
     const body = document.createElement("p");
     body.textContent = mail.body || "";
 
-    item.appendChild(title); item.appendChild(time); item.appendChild(body);
+    item.append(h3, time, body);
     item.addEventListener("click", () => openMail(mail));
     item.addEventListener("keypress", (e) => { if (e.key === "Enter") openMail(mail); });
     list.appendChild(item);
@@ -256,18 +257,17 @@ function openMail(mail) {
   const dlg = document.createElement("dialog");
   dlg.className = "sheet";
   dlg.innerHTML = `
-    <form method="dialog" class="sheet-content card sheet-aurora">
-      <header class="sheet-header">
-        <div class="sparkles">✨</div>
+    <form method="dialog" class="sheet-body">
+      <div class="sheet-aurora"></div>
+      <div class="sheet-content">
+        <div class="stars">✦ ✧ ✦</div>
         <h2>${escapeHtml(mail.title || "(Untitled)")}</h2>
-        <p class="sheet-subtitle">${niceDate(mail.createdAt || nowIso())}</p>
-      </header>
-      <div class="sheet-body">
-        <div style="white-space: pre-wrap; color: var(--muted); margin-top: 10px;">${escapeHtml(mail.body || "")}</div>
+        <p class="sub">${niceDate(mail.createdAt || nowIso())}</p>
+        <div style="white-space: pre-wrap; color: var(--muted); margin-top: 6px;">${escapeHtml(mail.body || "")}</div>
+        <div class="sheet-actions">
+          <button class="btn ghost" value="close">Close</button>
+        </div>
       </div>
-      <footer class="sheet-footer sticky">
-        <button class="btn ghost" value="close">Close</button>
-      </footer>
     </form>
   `;
   document.body.appendChild(dlg);
@@ -276,123 +276,94 @@ function openMail(mail) {
   renderInbox();
 }
 
-function escapeHtml(str) {
-  return (str || "").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
-}
+function escapeHtml(str){return (str||"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]))}
 
-function clearCompose() { ui.composeForm.reset(); }
+function clearCompose(){ ui.composeForm.reset(); }
 
-function generateId() {
-  const rnd = Math.random().toString(36).slice(2, 8);
-  return `${Date.now().toString(36)}-${rnd}`;
-}
+function genId(){ return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`; }
 
-async function handleSend(e) {
+async function handleSend(e){
   e?.preventDefault?.();
-  const form = ui.composeForm;
-  const title = form.title.value.trim();
-  const body = form.body.value.trim();
+  const title = ui.composeForm.title.value.trim();
+  const body = ui.composeForm.body.value.trim();
+  if(!title || !body){ toast("Please fill in title and message"); return; }
 
-  if (!title || !body) { showToast("Please fill in title and message"); return; }
-
-  const email = { id: generateId(), title, body, createdAt: nowIso() };
-
+  const email = { id: genId(), title, body, createdAt: nowIso() };
   state.emails.push(email);
-  saveLocalEmails();
+  saveLocal();
   state.unreadLocal.add(email.id);
   renderInbox();
 
-  if (!state.token) {
-    showToast("Saved locally. Add your secret to sync ✨");
-    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
+  if(!state.token){
+    toast("Saved locally. Add your secret to sync ✨");
+    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open",""); 
     return;
   }
 
-  const payload = { version: 1, updatedAt: nowIso(), emails: state.emails };
+  const payload = { version:1, updatedAt: nowIso(), emails: state.emails };
   const contentText = JSON.stringify(payload, null, 2);
-  const commitMsg = `Add note: ${title.slice(0, 64)}`;
+  const msg = `Add note: ${title.slice(0,64)}`;
 
-  try {
-    try {
-      const file = await githubGetFile();
-      state.fileSha = file.exists ? file.sha : null;
-    } catch {}
-    const put = await githubPutFile(contentText, commitMsg, state.fileSha);
+  try{
+    try{ const file = await githubGetFile(); state.fileSha = file.exists ? file.sha : null; }catch{}
+    const put = await githubPutFile(contentText, msg, state.fileSha);
     state.fileSha = put.sha || state.fileSha;
-    showToast("Sent and saved to GitHub ✓");
+    toast("Sent and saved to GitHub ✓");
     clearCompose();
     ui.connDot.style.background = "#7dffb3";
-  } catch (err) {
+  }catch(err){
     console.warn(err);
-    showToast("Saved locally. GitHub sync failed.");
+    toast("Saved locally. GitHub sync failed.");
     ui.connDot.style.background = "#ff8888";
   }
 }
 
-function exportJson() {
-  const payload = { version: 1, updatedAt: nowIso(), emails: state.emails };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+function exportJson(){
+  const payload = { version:1, updatedAt: nowIso(), emails: state.emails };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = "emails.json"; a.click();
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = "emails.json"; a.click(); URL.revokeObjectURL(url);
 }
 
-// Service Worker update banner wiring
-function setupUpdateBanner() {
-  if (!('serviceWorker' in navigator)) return;
+// Service worker update prompt
+function setupUpdateBanner(){
+  if(!("serviceWorker" in navigator)) return;
 
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    window.location.reload();
-  });
+  navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
 
-  window.addEventListener('load', async () => {
+  window.addEventListener("load", async () => {
     const reg = await navigator.serviceWorker.getRegistration();
-    if (!reg) return;
+    if(!reg) return;
 
-    const show = () => {
-      ui.updateBanner.hidden = false;
-      requestAnimationFrame(() => ui.updateBanner.classList.add('show'));
-    };
-    const hide = () => {
-      ui.updateBanner.classList.remove('show');
-      setTimeout(() => ui.updateBanner.hidden = true, 200);
-    };
-
-    const promptUpdate = () => {
-      if (!reg.waiting) return;
+    const show = () => { ui.updateBanner.hidden = false; requestAnimationFrame(()=> ui.updateBanner.classList.add("show")); };
+    const hide = () => { ui.updateBanner.classList.remove("show"); setTimeout(()=> ui.updateBanner.hidden = true, 200); };
+    const prompt = () => {
+      if(!reg.waiting) return;
       show();
-      ui.updateNow.onclick = () => {
-        ui.updateNow.disabled = true;
-        ui.updateNow.textContent = "Updating…";
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      };
+      ui.updateNow.onclick = () => { ui.updateNow.disabled = true; ui.updateNow.textContent = "Updating…"; reg.waiting.postMessage({type:"SKIP_WAITING"}); };
       ui.updateLater.onclick = () => hide();
     };
 
-    if (reg.waiting) promptUpdate();
-
-    reg.addEventListener('updatefound', () => {
+    if(reg.waiting) prompt();
+    reg.addEventListener("updatefound", () => {
       const sw = reg.installing;
-      if (!sw) return;
-      sw.addEventListener('statechange', () => {
-        if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-          promptUpdate();
-        }
+      if(!sw) return;
+      sw.addEventListener("statechange", ()=> {
+        if(sw.state === "installed" && navigator.serviceWorker.controller) prompt();
       });
     });
 
-    setInterval(() => reg.update(), 30 * 60 * 1000);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') reg.update();
-    });
+    setInterval(()=> reg.update(), 30*60*1000);
+    document.addEventListener("visibilitychange", ()=> { if(document.visibilityState === "visible") reg.update(); });
   });
 }
 
-function bindUI() {
+// Bind UI
+function bind(){
   // Tabs
-  ui.tabs.compose.addEventListener("click", () => switchTab("compose"));
-  ui.tabs.inbox.addEventListener("click", () => switchTab("inbox"));
+  ui.composeTab.addEventListener("click", ()=> switchTab("compose"));
+  ui.inboxTab.addEventListener("click", ()=> switchTab("inbox"));
 
   // Compose
   ui.composeForm.addEventListener("submit", handleSend);
@@ -402,67 +373,62 @@ function bindUI() {
   ui.refreshInbox?.addEventListener("click", fetchEmails);
   ui.exportJson?.addEventListener("click", exportJson);
 
-  // Mobile bars
+  // Mobile actions
   ui.sendMobile.addEventListener("click", handleSend);
   ui.clearMobile.addEventListener("click", clearCompose);
   ui.refreshMobile.addEventListener("click", fetchEmails);
   ui.exportMobile.addEventListener("click", exportJson);
 
-  // Token dialog controls
-  ui.toggleToken.addEventListener("click", () => {
+  // Token helpers
+  ui.toggleToken.addEventListener("click", ()=>{
     const el = ui.tokenInput;
     el.type = el.type === "password" ? "text" : "password";
     ui.toggleToken.textContent = el.type === "password" ? "Reveal" : "Hide";
   });
-  ui.pasteToken.addEventListener("click", async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) { ui.tokenInput.value = text.trim(); showToast("Pasted ✨"); }
-    } catch { showToast("Clipboard not available"); }
+  ui.pasteToken.addEventListener("click", async ()=>{
+    try{ const t = await navigator.clipboard.readText(); if(t){ ui.tokenInput.value = t.trim(); toast("Pasted ✨"); } }
+    catch{ toast("Clipboard not available"); }
   });
-  ui.changeToken.addEventListener("click", () => {
+  ui.changeToken.addEventListener("click", ()=>{
     ui.tokenInput.value = "";
     clearToken();
-    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
+    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open","");
   });
-  ui.keyFab.addEventListener("click", () => {
+  ui.keyFab.addEventListener("click", ()=>{
     ui.tokenInput.value = getStoredToken() || "";
-    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
+    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open","");
     ui.tokenInput.focus();
   });
 
   // Footer flip
-  ui.footerFlip?.addEventListener("click", () => {
+  ui.footerFlip?.addEventListener("click", ()=>{
     const flipped = ui.footerFlip.classList.toggle("flipped");
     ui.footerFlip.setAttribute("aria-pressed", String(flipped));
-    if (navigator.vibrate) try { navigator.vibrate(10); } catch {}
+    if(navigator.vibrate) try{ navigator.vibrate(10); }catch{}
   });
 
   setupUpdateBanner();
 }
 
-function switchTab(which) {
+function switchTab(which){
   const entries = [
-    ["compose", ui.tabs.compose, ui.panels.compose, ui.composeActionBar],
-    ["inbox", ui.tabs.inbox, ui.panels.inbox, ui.inboxActionBar]
+    ["compose", ui.composeTab, ui.composePanel, ui.composeBar],
+    ["inbox", ui.inboxTab, ui.inboxPanel, ui.inboxBar]
   ];
-  for (const [name, tab, panel, bar] of entries) {
+  for(const [name, tab, panel, bar] of entries){
     const active = name === which;
     tab.classList.toggle("active", active);
     tab.setAttribute("aria-selected", String(active));
     panel.classList.toggle("active", active);
-    // Toggle relevant mobile bar
-    if (window.matchMedia("(min-width: 980px)").matches) {
-      bar.style.display = "none";
-    } else {
-      bar.style.display = active ? "flex" : "none";
-    }
+    if(window.matchMedia("(min-width: 960px)").matches) bar.style.display = "none";
+    else bar.style.display = active ? "flex" : "none";
   }
 }
 
-async function init() {
+// Init
+async function init(){
   ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
-  bindUI();
+  bind();
   switchTab("compose");
   await ensureToken();
   await fetchEmails();

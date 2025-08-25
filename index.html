@@ -13,135 +13,158 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="aurora-bg" aria-hidden="true"></div>
+  <!-- Global aurora canvas -->
+  <div class="sky" aria-hidden="true">
+    <div class="glow a"></div>
+    <div class="glow b"></div>
+    <div class="glow c"></div>
+    <div class="glow d"></div>
+  </div>
 
-  <header class="site-header">
+  <!-- Header -->
+  <header class="bar">
     <div class="brand">
-      <span class="logo">✿</span>
-      <div class="titles">
+      <div class="emblem">✿</div>
+      <div class="title">
         <h1>Aurora Inbox</h1>
-        <p class="subtitle">Little notes to your future self, saved to GitHub.</p>
+        <p>Sweet notes for future you</p>
       </div>
     </div>
 
-    <div class="status-group">
-      <span class="status-pill" id="repoBadge" title="Target repository"></span>
-      <span class="status-dot" id="connDot" title="Sync status"></span>
-      <button id="changeToken" class="token-btn" aria-label="Change token">🔑</button>
+    <div class="indicators">
+      <span id="repoBadge" class="pill"></span>
+      <span id="connDot" class="dot" title="Sync status"></span>
+      <button id="changeToken" class="icon-btn" aria-label="Change token">🔑</button>
     </div>
   </header>
 
+  <!-- Tabs -->
   <nav class="tabs" role="tablist" aria-label="Primary">
-    <button role="tab" aria-selected="true" aria-controls="composePanel" id="composeTab" class="tab active">Compose</button>
-    <button role="tab" aria-selected="false" aria-controls="inboxPanel" id="inboxTab" class="tab">Inbox</button>
+    <button id="composeTab" class="tab active" role="tab" aria-selected="true" aria-controls="composePanel">
+      <span>Compose</span>
+    </button>
+    <button id="inboxTab" class="tab" role="tab" aria-selected="false" aria-controls="inboxPanel">
+      <span>Inbox</span>
+    </button>
   </nav>
 
-  <main>
-    <section id="composePanel" role="tabpanel" aria-labelledby="composeTab" class="panel active">
-      <article class="card">
-        <h2>New Note</h2>
-        <form id="composeForm">
-          <div class="field">
-            <label for="title">Title</label>
-            <input id="title" name="title" type="text" required maxlength="120" placeholder="A tiny reminder..." />
-          </div>
-          <div class="field">
-            <label for="body">Message</label>
-            <textarea id="body" name="body" rows="8" required placeholder="Write something lovely to your future self..."></textarea>
-          </div>
+  <!-- Content -->
+  <main class="wrap">
+    <!-- Compose -->
+    <section id="composePanel" class="panel active" role="tabpanel" aria-labelledby="composeTab">
+      <article class="glass card">
+        <header class="card-head">
+          <h2>Write a tiny spell</h2>
+        </header>
 
-          <!-- Desktop/tablet actions inside the form -->
+        <form id="composeForm" class="form">
+          <label class="field">
+            <span class="label">Title</span>
+            <input id="title" name="title" type="text" required maxlength="120" placeholder="Starlight reminder…" />
+          </label>
+
+          <label class="field">
+            <span class="label">Message</span>
+            <textarea id="body" name="body" rows="8" required placeholder="Whisper to future-you…"></textarea>
+          </label>
+
+          <!-- Desktop/tablet actions -->
           <div class="actions desktop-only">
-            <button type="submit" class="btn primary">Send to Myself</button>
+            <button type="submit" class="btn rainbow">Send to myself</button>
             <button type="button" id="clearForm" class="btn ghost">Clear</button>
           </div>
 
-          <p class="hint">Your GitHub token is stored locally in your browser. Keep this site private.</p>
+          <p class="hint">Private to your device. When a secret key is set, notes sync to your GitHub vault.</p>
         </form>
       </article>
     </section>
 
-    <section id="inboxPanel" role="tabpanel" aria-labelledby="inboxTab" class="panel">
-      <article class="card">
-        <div class="inbox-header">
-          <h2>Inbox</h2>
-          <div class="inbox-actions desktop-only">
+    <!-- Inbox -->
+    <section id="inboxPanel" class="panel" role="tabpanel" aria-labelledby="inboxTab">
+      <article class="glass card">
+        <header class="card-head row">
+          <h2>Your constellations</h2>
+          <div class="desktop-only">
             <button id="refreshInbox" class="btn small">Refresh</button>
             <button id="exportJson" class="btn small ghost">Export JSON</button>
           </div>
-        </div>
+        </header>
+
         <div id="emptyState" class="empty">
-          <p>No notes yet. Write your first one on the Compose tab ✨</p>
+          <p>No notes yet. Cast your first ✨ on the Compose tab.</p>
         </div>
-        <div id="inboxList" class="inbox-list" role="list"></div>
+
+        <div id="inboxList" class="masonry" role="list"></div>
       </article>
     </section>
   </main>
 
-  <!-- Footer -->
-  <footer class="site-footer" role="contentinfo">
-    <button id="footerFlip" class="flip-card" aria-pressed="false" aria-label="Toggle footer message">
-      <span class="flip-inner">
-        <span class="flip-face front">
-          <span class="code">&lt;/&gt;</span>
-          <span class="with">with 🪄 by</span>
-          <img class="signature" src="icons/spandan-signature.png" alt="Spandan" />
-        </span>
-        <span class="flip-face back" aria-hidden="true">An S² Labs Product</span>
-      </span>
-    </button>
-  </footer>
-
   <!-- Mobile sticky action bars -->
-  <div class="mobile-action-bar" id="composeActionBar" data-for="compose">
-    <button id="sendMobile" class="btn primary">Send</button>
+  <div id="composeActionBar" class="action-bar" data-for="compose">
+    <button id="sendMobile" class="btn rainbow">Send</button>
     <button id="clearMobile" class="btn ghost">Clear</button>
   </div>
-  <div class="mobile-action-bar" id="inboxActionBar" data-for="inbox">
-    <button id="refreshMobile" class="btn primary">Refresh</button>
+  <div id="inboxActionBar" class="action-bar" data-for="inbox">
+    <button id="refreshMobile" class="btn rainbow">Refresh</button>
     <button id="exportMobile" class="btn ghost">Export</button>
   </div>
 
-  <!-- Floating key button on mobile -->
-  <button id="keyFab" class="fab-key" aria-label="Set GitHub token">🔑</button>
+  <!-- Floating token FAB on mobile -->
+  <button id="keyFab" class="fab" aria-label="Set GitHub token">🔑</button>
 
   <!-- Magical token sheet -->
   <dialog id="tokenDialog" class="sheet" aria-labelledby="tokenTitle">
-    <form method="dialog" class="sheet-content card sheet-aurora" id="tokenForm">
-      <header class="sheet-header">
-        <div class="sparkles">✨</div>
+    <form id="tokenForm" method="dialog" class="sheet-body">
+      <div class="sheet-aurora"></div>
+      <div class="sheet-content">
+        <div class="stars">✦ ✧ ✦</div>
         <h2 id="tokenTitle">Unlock your stardust vault</h2>
-        <p class="sheet-subtitle">Paste your secret key to let Aurora save notes to your GitHub galaxy. It stays on your device.</p>
-      </header>
-      <div class="sheet-body">
-        <div class="field">
-          <label for="tokenInput">Secret key</label>
-          <div class="token-row pretty-input">
-            <input id="tokenInput" type="password" inputmode="text" autocomplete="off"
-              placeholder="ghp_… or github_pat_…" required />
-            <div class="token-tools">
+        <p class="sub">Paste your secret so Aurora can tuck notes into your GitHub galaxy. It never leaves this device.</p>
+
+        <label class="field">
+          <span class="label">Secret key</span>
+          <div class="token">
+            <input id="tokenInput" type="password" inputmode="text" autocomplete="off" placeholder="ghp_… or github_pat_…" required />
+            <div class="row gap">
               <button type="button" id="pasteToken" class="chip">Paste</button>
               <button type="button" id="toggleToken" class="chip">Reveal</button>
             </div>
           </div>
-          <p class="hint">Tip: create a fine‑grained token with Contents: Read & Write for this repo only.</p>
+        </label>
+
+        <p class="hint center">Tip: fine‑grained token → Contents: Read & Write for only this repo.</p>
+
+        <div class="sheet-actions">
+          <button id="saveToken" class="btn rainbow" value="save">Save secret</button>
         </div>
       </div>
-      <footer class="sheet-footer sticky">
-        <button class="btn primary" value="save" id="saveToken">Save secret</button>
-      </footer>
     </form>
   </dialog>
 
-  <!-- Update available banner -->
-  <div id="updateBanner" class="update-banner" hidden>
-    <div class="update-text">A new Aurora is shimmering ✨</div>
-    <div class="update-actions">
-      <button id="updateNow" class="btn primary small">Update</button>
-      <button id="updateLater" class="btn ghost small">Later</button>
+  <!-- Update banner -->
+  <div id="updateBanner" class="update" hidden>
+    <span class="update-text">A new Aurora is shimmering ✨</span>
+    <div class="row gap">
+      <button id="updateNow" class="btn small rainbow">Update</button>
+      <button id="updateLater" class="btn small ghost">Later</button>
     </div>
   </div>
 
+  <!-- Footer -->
+  <footer class="foot" role="contentinfo">
+    <button id="footerFlip" class="flip" aria-pressed="false" aria-label="Toggle footer message">
+      <span class="flip-inner">
+        <span class="face front">
+          <span class="tag">&lt;/&gt;</span>
+          <span class="with">with 🪄 by</span>
+          <img class="sig" src="icons/spandan-signature.png" alt="Spandan" />
+        </span>
+        <span class="face back" aria-hidden="true">An S² Labs Product</span>
+      </span>
+    </button>
+  </footer>
+
+  <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script type="module" src="app.js"></script>
