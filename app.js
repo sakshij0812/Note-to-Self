@@ -391,6 +391,10 @@ function showUpdateModal(reg) {
 
 // Init
 window.addEventListener('DOMContentLoaded', () => {
+  // Gentle 1s loader fade
+  const loader = $('#loadingScreen');
+  setTimeout(() => loader?.classList.add('hide'), 1000);
+
   // Token
   const remembered = loadToken();
   if (remembered) magicToken = remembered;
@@ -423,7 +427,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const flipOnce = () => {
       credit.classList.add('flipped');
       credit.setAttribute('aria-pressed', 'true');
-      // Unflip after a moment so both sides can be seen with tap
       setTimeout(() => {
         credit.classList.remove('flipped');
         credit.setAttribute('aria-pressed', 'false');
