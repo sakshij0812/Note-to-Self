@@ -255,6 +255,41 @@ input::placeholder, textarea::placeholder { color: #e7d3ea; opacity: 0.7; }
 }
 @media (min-width: 980px) { .fab-key { display: none; } }
 
+/* Update banner (appears above mobile actions) */
+.update-banner {
+  position: fixed;
+  left: 12px; right: 12px;
+  bottom: calc(112px + env(safe-area-inset-bottom)); /* sit above action bar */
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 10px 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--card-stroke);
+  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  z-index: 80;
+  transform: translateY(16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .18s ease, opacity .18s ease;
+}
+.update-banner .update-text { font-weight: 700; font-size: 14px; color: var(--text); }
+.update-banner .update-actions { display: flex; gap: 8px; }
+.update-banner.show {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (min-width: 980px) {
+  .update-banner {
+    left: 50%; right: auto; transform: translate(16px, 16px);
+    bottom: 24px;
+    translate: -50% 0;
+    max-width: 520px;
+  }
+  .update-banner.show { transform: translate(-50%, 0); }
+}
+
 /* Token sheet (magical/engaging) */
 .sheet::backdrop { background: rgba(0,0,0,0.55); backdrop-filter: blur(2px); }
 .sheet {
@@ -290,9 +325,7 @@ input::placeholder, textarea::placeholder { color: #e7d3ea; opacity: 0.7; }
   filter: blur(40px) saturate(130%);
   z-index: -1;
 }
-.sheet-aurora::after {
-  inset: auto -10% -20% -10%; height: 160px;
-}
+.sheet-aurora::after { inset: auto -10% -20% -10%; height: 160px; }
 
 .sheet-header { padding: 18px 16px 12px; border-bottom: 1px solid var(--card-stroke); text-align: center; }
 .sheet-header .sparkles { font-size: 18px; opacity: 0.9; }
@@ -331,7 +364,7 @@ input::placeholder, textarea::placeholder { color: #e7d3ea; opacity: 0.7; }
   box-shadow: 0 8px 24px rgba(214, 168, 255, 0.35);
   opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none; font-weight: 700;
-  z-index: 50;
+  z-index: 90;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 

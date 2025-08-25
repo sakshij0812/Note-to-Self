@@ -1,4 +1,4 @@
-// Aurora Inbox - Token-on-first-run build with magical token sheet and mobile-first actions
+// Aurora Inbox - Token-on-first-run build with magical token sheet, mobile-first actions, and update banner
 
 const CONFIG = {
   owner: "sakshij0812",  
@@ -58,6 +58,11 @@ const ui = {
   toggleToken: qs("#toggleToken"),
   pasteToken: qs("#pasteToken"),
   saveToken: qs("#saveToken"),
+
+  // update banner
+  updateBanner: qs("#updateBanner"),
+  updateNow: qs("#updateNow"),
+  updateLater: qs("#updateLater"),
 };
 
 const encodeBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
@@ -330,6 +335,62 @@ function exportJson() {
   URL.revokeObjectURL(url);
 }
 
+// Service Worker update banner wiring
+function setupUpdateBanner() {
+  if (!('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // Reload to apply the fresh SW once it takes control
+    window.location.reload();
+  });
+
+  window.addEventListener('load', async () => {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return;
+
+    const show = () => {
+      ui.updateBanner.hidden = false;
+      // Force layout for transition start
+      requestAnimationFrame(() => ui.updateBanner.classList.add('show'));
+    };
+    const hide = () => {
+      ui.updateBanner.classList.remove('show');
+      setTimeout(() => ui.updateBanner.hidden = true, 200);
+    };
+
+    const promptUpdate = () => {
+      if (!reg.waiting) return;
+      show();
+      ui.updateNow.onclick = () => {
+        ui.updateNow.disabled = true;
+        ui.updateNow.textContent = "Updating…";
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      };
+      ui.updateLater.onclick = () => hide();
+    };
+
+    // If already waiting (e.g., after background update)
+    if (reg.waiting) promptUpdate();
+
+    // Listen for a new installing worker
+    reg.addEventListener('updatefound', () => {
+      const sw = reg.installing;
+      if (!sw) return;
+      sw.addEventListener('statechange', () => {
+        if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+          promptUpdate();
+        }
+      });
+    });
+
+    // Check periodically and on tab visibility
+    setInterval(() => reg.update(), 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reg.update();
+    });
+  });
+}
+
 function bindUI() {
   // Tabs
   ui.tabs.compose.addEventListener("click", () => switchTab("compose"));
@@ -371,6 +432,8 @@ function bindUI() {
     ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
     ui.tokenInput.focus();
   });
+
+  setupUpdateBanner();
 }
 
 function switchTab(which) {
