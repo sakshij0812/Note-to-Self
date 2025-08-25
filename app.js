@@ -1,22 +1,26 @@
-// Aurora Inbox - Vanilla JS PWA using GitHub Contents API
-// Notes are saved to {owner}/{repo}@{branch}:{path} as JSON.
-// Token needs repository permissions → Contents: Read and Write for that repo.
-// WARNING: Storing a token in localStorage exposes it to anyone with device/browser access. For personal use only.
+// Aurora Inbox - Token-on-first-run build
+// Owner/repo/branch/path are hardcoded in CONFIG.
+// On first run, app prompts for the GitHub token, saves it locally, and also sets it on the DOM for this session.
+
+const CONFIG = {
+  owner: "sakshij0812",  
+  repo: "Note-to-Self-Data",
+  branch: "main",
+  path: "emails.json"
+};
+
+const STORAGE_KEYS = {
+  token: "auroraInbox.token",
+  cache: "auroraInbox.emailsCache"
+};
 
 const qs = (s, el = document) => el.querySelector(s);
-const qsa = (s, el = document) => [...el.querySelectorAll(s)];
 
 const state = {
   emails: [],
-  fileSha: null, // last known sha of JSON in repo
-  config: {
-    owner: "sakshij0812",
-    repo: "Note-to-Self-Data",
-    branch: "main",
-    path: "emails.json",
-    token: "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"
-  },
-  unreadLocal: new Set() // track unread locally (ids)
+  fileSha: null,
+  token: null,         // runtime token
+  unreadLocal: new Set()
 };
 
 const ui = {
@@ -34,24 +38,20 @@ const ui = {
   exportJson: qs("#exportJson"),
   inboxList: qs("#inboxList"),
   emptyState: qs("#emptyState"),
+  repoBadge: qs("#repoBadge"),
+  connDot: qs("#connDot"),
   toast: qs("#toast"),
-  settings: {
-    dialog: qs("#settingsDialog"),
-    open: qs("#openSettings"),
-    save: qs("#saveSettings"),
-    toggleToken: qs("#toggleToken"),
-    fields: {
-      owner: qs("#owner"),
-      repo: qs("#repo"),
-      branch: qs("#branch"),
-      path: qs("#path"),
-      token: qs("#token"),
-    }
-  }
+
+  // token UI
+  tokenDialog: qs("#tokenDialog"),
+  tokenForm: qs("#tokenForm"),
+  tokenInput: qs("#tokenInput"),
+  toggleToken: qs("#toggleToken"),
+  saveToken: qs("#saveToken"),
+  changeToken: qs("#changeToken")
 };
 
 // Utilities
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const encodeBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 const decodeBase64 = (b64) => decodeURIComponent(escape(atob(b64)));
 const nowIso = () => new Date().toISOString();
@@ -63,50 +63,15 @@ function showToast(msg, ms = 2200) {
   setTimeout(() => ui.toast.classList.remove("show"), ms);
 }
 
-function loadConfig() {
-  try {
-    const raw = localStorage.getItem("auroraInbox.config");
-    if (raw) {
-      const cfg = JSON.parse(raw);
-      state.config = { ...state.config, ...cfg };
-    }
-  } catch {}
-  // Seed UI
-  const { owner, repo, branch, path, token } = state.config;
-  ui.settings.fields.owner.value = owner || "";
-  ui.settings.fields.repo.value = repo || "";
-  ui.settings.fields.branch.value = branch || "main";
-  ui.settings.fields.path.value = path || "emails.json";
-  ui.settings.fields.token.value = token || "";
-}
-
-function saveConfig() {
-  const cfg = {
-    owner: ui.settings.fields.owner.value.trim(),
-    repo: ui.settings.fields.repo.value.trim(),
-    branch: ui.settings.fields.branch.value.trim() || "main",
-    path: ui.settings.fields.path.value.trim() || "emails.json",
-    token: ui.settings.fields.token.value.trim(),
-  };
-  state.config = cfg;
-  localStorage.setItem("auroraInbox.config", JSON.stringify(cfg));
-  showToast("Settings saved");
-}
-
-function isConfigComplete() {
-  const { owner, repo, branch, path, token } = state.config;
-  return owner && repo && branch && path && token;
-}
-
+// Local cache
 function saveLocalEmails() {
-  localStorage.setItem("auroraInbox.emailsCache", JSON.stringify({
+  localStorage.setItem(STORAGE_KEYS.cache, JSON.stringify({
     version: 1, updatedAt: nowIso(), emails: state.emails
   }));
 }
-
 function loadLocalEmails() {
   try {
-    const raw = localStorage.getItem("auroraInbox.emailsCache");
+    const raw = localStorage.getItem(STORAGE_KEYS.cache);
     if (!raw) return;
     const data = JSON.parse(raw);
     if (Array.isArray(data)) {
@@ -117,13 +82,58 @@ function loadLocalEmails() {
   } catch {}
 }
 
+// Token handling (persist + DOM)
+function getStoredToken() {
+  try { return localStorage.getItem(STORAGE_KEYS.token) || null; } catch { return null; }
+}
+function setToken(token) {
+  state.token = token;
+  try { localStorage.setItem(STORAGE_KEYS.token, token); } catch {}
+  document.body.dataset.ghToken = token ? "set" : "unset"; // simple DOM mark
+}
+function clearToken() {
+  state.token = null;
+  try { localStorage.removeItem(STORAGE_KEYS.token); } catch {}
+  document.body.dataset.ghToken = "unset";
+}
+
+// Ensure token is present (show sheet if missing)
+async function ensureToken() {
+  const existing = getStoredToken();
+  if (existing) {
+    setToken(existing);
+    return true;
+  }
+  // Open token sheet and wait for submit
+  return new Promise((resolve) => {
+    // prevent closing without a token
+    ui.tokenDialog.addEventListener("cancel", (e) => e.preventDefault());
+    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
+    ui.tokenInput.focus();
+
+    const onSubmit = (e) => {
+      e.preventDefault();
+      const token = ui.tokenInput.value.trim();
+      if (!token) return;
+      setToken(token);
+      ui.tokenDialog.close?.();
+      ui.tokenDialog.removeAttribute("open");
+      ui.tokenForm.removeEventListener("submit", onSubmit);
+      resolve(true);
+    };
+    ui.tokenForm.addEventListener("submit", onSubmit);
+  });
+}
+
+// GitHub API
 async function githubGetFile() {
-  const { owner, repo, path, branch, token } = state.config;
+  const { owner, repo, path, branch } = CONFIG;
+  if (!state.token) throw new Error("Missing token");
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
   const res = await fetch(url, {
     headers: {
       "Accept": "application/vnd.github+json",
-      "Authorization": `Bearer ${token}`,
+      "Authorization": `Bearer ${state.token}`,
       "X-GitHub-Api-Version": "2022-11-28"
     }
   });
@@ -138,7 +148,8 @@ async function githubGetFile() {
 }
 
 async function githubPutFile(contentText, message, existingSha = null) {
-  const { owner, repo, path, branch, token } = state.config;
+  const { owner, repo, path, branch } = CONFIG;
+  if (!state.token) throw new Error("Missing token");
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
   const body = {
     message,
@@ -151,7 +162,7 @@ async function githubPutFile(contentText, message, existingSha = null) {
     method: "PUT",
     headers: {
       "Accept": "application/vnd.github+json",
-      "Authorization": `Bearer ${token}`,
+      "Authorization": `Bearer ${state.token}`,
       "Content-Type": "application/json",
       "X-GitHub-Api-Version": "2022-11-28"
     },
@@ -165,11 +176,20 @@ async function githubPutFile(contentText, message, existingSha = null) {
   return { content: json.content, commit: json.commit, sha: json.content?.sha };
 }
 
+// Data flow
 async function fetchEmails() {
-  loadLocalEmails(); // optimistic render
+  // Optimistic render from cache for offline
+  loadLocalEmails();
   renderInbox();
 
-  if (!isConfigComplete()) return;
+  // Reflect repo target
+  ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
+  ui.connDot.style.background = "#b86fff"; // idle
+
+  if (!state.token) {
+    ui.connDot.style.background = "#ffcc66";
+    return;
+  }
 
   try {
     const file = await githubGetFile();
@@ -178,6 +198,7 @@ async function fetchEmails() {
       state.fileSha = null;
       saveLocalEmails();
       renderInbox();
+      ui.connDot.style.background = "#ffcc66"; // file will be created on first send
       return;
     }
     const parsed = JSON.parse(file.content || "{}");
@@ -186,8 +207,10 @@ async function fetchEmails() {
     state.fileSha = file.sha;
     saveLocalEmails();
     renderInbox();
+    ui.connDot.style.background = "#7dffb3"; // synced
   } catch (e) {
     console.warn(e);
+    ui.connDot.style.background = "#ff8888"; // error
     showToast("Failed to fetch from GitHub (using cache)");
   }
 }
@@ -210,14 +233,15 @@ function renderInbox() {
     item.tabIndex = 0;
 
     const unread = state.unreadLocal.has(mail.id);
-    const title = document.createElement("h3");
-    title.textContent = mail.title || "(Untitled)";
     if (unread) {
       const badge = document.createElement("span");
       badge.className = "badge";
       badge.textContent = "NEW";
       item.appendChild(badge);
     }
+
+    const title = document.createElement("h3");
+    title.textContent = mail.title || "(Untitled)";
 
     const time = document.createElement("time");
     time.dateTime = mail.createdAt || "";
@@ -240,25 +264,24 @@ function renderInbox() {
 function openMail(mail) {
   state.unreadLocal.delete(mail.id);
   const dlg = document.createElement("dialog");
-  dlg.className = "settings";
+  dlg.className = "sheet";
   dlg.innerHTML = `
-    <form method="dialog" class="settings-content card">
-      <header class="settings-header">
+    <form method="dialog" class="sheet-content card">
+      <header class="sheet-header">
         <h2>${escapeHtml(mail.title || "(Untitled)")}</h2>
-        <button class="icon-btn" value="close" aria-label="Close">✕</button>
       </header>
-      <div class="settings-body">
+      <div class="sheet-body">
         <p class="hint">${niceDate(mail.createdAt || nowIso())}</p>
         <div style="white-space: pre-wrap; color: var(--muted); margin-top: 10px;">${escapeHtml(mail.body || "")}</div>
       </div>
-      <footer class="settings-footer">
+      <footer class="sheet-footer">
         <button class="btn ghost" value="close">Close</button>
       </footer>
     </form>
   `;
   document.body.appendChild(dlg);
   dlg.addEventListener("close", () => dlg.remove());
-  dlg.showModal();
+  dlg.showModal?.() || dlg.setAttribute("open", "");
   renderInbox();
 }
 
@@ -298,9 +321,10 @@ async function handleSend(e) {
   state.unreadLocal.add(email.id);
   renderInbox();
 
-  if (!isConfigComplete()) {
-    showToast("Saved locally. Configure GitHub in Settings to sync.");
-    clearCompose();
+  // If token missing, just keep local and prompt
+  if (!state.token) {
+    showToast("Saved locally. Add your GitHub token to sync.");
+    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
     return;
   }
 
@@ -314,19 +338,21 @@ async function handleSend(e) {
   const commitMsg = `Add note: ${title.slice(0, 64)}`;
 
   try {
-    // Ensure we use latest sha
+    // Get latest sha to reduce conflicts
     try {
       const file = await githubGetFile();
-      if (file.exists) state.fileSha = file.sha;
+      state.fileSha = file.exists ? file.sha : null;
     } catch {}
 
     const put = await githubPutFile(contentText, commitMsg, state.fileSha);
     state.fileSha = put.sha || state.fileSha;
     showToast("Sent and saved to GitHub ✓");
     clearCompose();
+    ui.connDot.style.background = "#7dffb3";
   } catch (err) {
     console.warn(err);
     showToast("Saved locally. GitHub sync failed.");
+    ui.connDot.style.background = "#ff8888";
   }
 }
 
@@ -358,28 +384,24 @@ function bindUI() {
   ui.refreshInbox.addEventListener("click", fetchEmails);
   ui.exportJson.addEventListener("click", exportJson);
 
-  // Settings
-  ui.settings.open.addEventListener("click", () => ui.settings.dialog.showModal());
-  ui.settings.save.addEventListener("click", (e) => {
-    e.preventDefault();
-    saveConfig();
-    ui.settings.dialog.close();
-    fetchEmails();
-  });
-  ui.settings.toggleToken.addEventListener("click", () => {
-    const el = ui.settings.fields.token;
+  // Token dialog
+  ui.toggleToken.addEventListener("click", () => {
+    const el = ui.tokenInput;
     el.type = el.type === "password" ? "text" : "password";
-    ui.settings.toggleToken.textContent = el.type === "password" ? "Show" : "Hide";
+    ui.toggleToken.textContent = el.type === "password" ? "Show" : "Hide";
   });
-
-  // Keyboard close for dialog
-  ui.settings.dialog.addEventListener("cancel", () => ui.settings.dialog.close());
+  ui.changeToken.addEventListener("click", () => {
+    ui.tokenInput.value = "";
+    clearToken();
+    ui.tokenDialog.showModal?.() || ui.tokenDialog.setAttribute("open", "");
+  });
 }
 
 function switchTab(which) {
-  const tabs = ui.tabs;
-  const panels = ui.panels;
-  const entries = [["compose", tabs.compose, panels.compose], ["inbox", tabs.inbox, panels.inbox]];
+  const entries = [
+    ["compose", ui.tabs.compose, ui.panels.compose],
+    ["inbox", ui.tabs.inbox, ui.panels.inbox]
+  ];
   for (const [name, tab, panel] of entries) {
     const active = name === which;
     tab.classList.toggle("active", active);
@@ -389,8 +411,10 @@ function switchTab(which) {
 }
 
 async function init() {
-  loadConfig();
+  // Show target repo badge immediately
+  ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
   bindUI();
+  await ensureToken(); // prompt if missing
   await fetchEmails();
 }
 
