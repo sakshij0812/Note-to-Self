@@ -1,4 +1,4 @@
-const CACHE = "aurora-inbox-v4";
+const CACHE = "aurora-inbox-v1.0";
 const APP_SHELL = [
   "./",
   "./index.html",

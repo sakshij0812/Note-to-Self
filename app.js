@@ -1,4 +1,4 @@
-// Aurora Inbox - Token-on-first-run build with magical token sheet, mobile-first actions, and update banner
+// Aurora Inbox - Token-on-first-run build with magical token sheet, mobile-first actions, update banner, and footer flip
 
 const CONFIG = {
   owner: "sakshij0812",  
@@ -63,6 +63,9 @@ const ui = {
   updateBanner: qs("#updateBanner"),
   updateNow: qs("#updateNow"),
   updateLater: qs("#updateLater"),
+
+  // footer
+  footerFlip: qs("#footerFlip"),
 };
 
 const encodeBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
@@ -340,7 +343,6 @@ function setupUpdateBanner() {
   if (!('serviceWorker' in navigator)) return;
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // Reload to apply the fresh SW once it takes control
     window.location.reload();
   });
 
@@ -350,7 +352,6 @@ function setupUpdateBanner() {
 
     const show = () => {
       ui.updateBanner.hidden = false;
-      // Force layout for transition start
       requestAnimationFrame(() => ui.updateBanner.classList.add('show'));
     };
     const hide = () => {
@@ -369,10 +370,8 @@ function setupUpdateBanner() {
       ui.updateLater.onclick = () => hide();
     };
 
-    // If already waiting (e.g., after background update)
     if (reg.waiting) promptUpdate();
 
-    // Listen for a new installing worker
     reg.addEventListener('updatefound', () => {
       const sw = reg.installing;
       if (!sw) return;
@@ -383,7 +382,6 @@ function setupUpdateBanner() {
       });
     });
 
-    // Check periodically and on tab visibility
     setInterval(() => reg.update(), 30 * 60 * 1000);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') reg.update();
@@ -433,6 +431,13 @@ function bindUI() {
     ui.tokenInput.focus();
   });
 
+  // Footer flip
+  ui.footerFlip?.addEventListener("click", () => {
+    const flipped = ui.footerFlip.classList.toggle("flipped");
+    ui.footerFlip.setAttribute("aria-pressed", String(flipped));
+    if (navigator.vibrate) try { navigator.vibrate(10); } catch {}
+  });
+
   setupUpdateBanner();
 }
 
@@ -458,7 +463,6 @@ function switchTab(which) {
 async function init() {
   ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
   bindUI();
-  // Default to compose view with correct mobile bar visibility
   switchTab("compose");
   await ensureToken();
   await fetchEmails();

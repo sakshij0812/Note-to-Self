@@ -224,6 +224,58 @@ input::placeholder, textarea::placeholder { color: #e7d3ea; opacity: 0.7; }
   .titles h1 { font-size: 34px; }
 }
 
+/* Footer with flip interaction */
+.site-footer {
+  max-width: 900px;
+  margin: 20px auto clamp(118px, 16vh, 140px);
+  padding: 0 16px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+@media (min-width: 980px) {
+  .site-footer { max-width: 1100px; margin-bottom: 32px; }
+}
+.flip-card {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  perspective: 1000px;
+}
+.flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform .6s cubic-bezier(.2,.6,.2,1);
+}
+.flip-card.flipped .flip-inner { transform: rotateX(180deg); }
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 194, 240, 0.22), transparent 46%),
+    radial-gradient(120% 120% at 100% 0%, rgba(155, 230, 255, 0.20), transparent 52%),
+    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 10px 26px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.08) inset;
+}
+.flip-face .code { font-weight: 800; letter-spacing: .02em; }
+.flip-face .with { opacity: .9; }
+.flip-face .signature { height: 18px; display: block; filter: drop-shadow(0 2px 6px rgba(0,0,0,.25)); }
+.flip-face.back {
+  position: absolute;
+  inset: 0;
+  justify-content: center;
+  transform: rotateX(180deg);
+}
+
 /* Mobile-first sticky action bars */
 .desktop-only { display: none; }
 .mobile-action-bar {
@@ -291,15 +343,13 @@ input::placeholder, textarea::placeholder { color: #e7d3ea; opacity: 0.7; }
   .update-banner.show { transform: translate(-50%, 0); }
 }
 
-/* ============ Magical token sheet refinements ============ */
+/* ============ Magical token sheet (already refined) ============ */
 
-/* Remove the default white dialog box on desktop */
 .sheet { border: 0; padding: 0; margin: 0; width: 100vw; max-width: 100%; position: fixed; bottom: 0; left: 0; right: 0; background: transparent; }
 .sheet::backdrop { background: radial-gradient(120% 120% at 50% 10%, rgba(20,16,28,0.85), rgba(7,6,10,0.65)); backdrop-filter: blur(4px); }
 
-/* No hard borders; soft glass surface with aurora wash */
 .sheet-content.card {
-  border: none; /* kill lines */
+  border: none;
   background:
     radial-gradient(120% 120% at 10% -10%, rgba(255, 194, 240, 0.20), transparent 40%),
     radial-gradient(100% 120% at 90% 0%, rgba(155, 230, 255, 0.18), transparent 45%),
@@ -307,14 +357,11 @@ input::placeholder, textarea::placeholder { color: #e7d3ea; opacity: 0.7; }
     linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
   backdrop-filter: blur(22px) saturate(140%);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
-  box-shadow:
-    0 24px 60px rgba(0,0,0,0.55),
-    0 2px 0 rgba(255,255,255,0.08) inset; /* faint inner highlight */
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 2px 0 rgba(255,255,255,0.08) inset;
   border-radius: 22px 22px 0 0;
   overflow: hidden;
 }
 
-/* Extra aurora glow layers (subtle, no edges) */
 .sheet-aurora { position: relative; }
 .sheet-aurora::before,
 .sheet-aurora::after {
@@ -329,58 +376,42 @@ input::placeholder, textarea::placeholder { color: #e7d3ea; opacity: 0.7; }
   animation: aurora-waves 16s ease-in-out infinite alternate;
 }
 .sheet-aurora::after { inset: auto -10% -25% -10%; height: 160px; animation-duration: 22s; }
+@keyframes aurora-waves { 0% { transform: translateY(0) scale(1); opacity: 0.9; } 100% { transform: translateY(4%) scale(1.02); opacity: 1; } }
 
-@keyframes aurora-waves {
-  0% { transform: translateY(0) scale(1); opacity: 0.9; }
-  100% { transform: translateY(4%) scale(1.02); opacity: 1; }
-}
-
-/* Header/footer: remove lines; keep spacing */
 .sheet-header { padding: 20px 18px 10px; text-align: center; border: none; }
 .sheet-header .sparkles { font-size: 18px; opacity: 0.95; }
 .sheet-header h2 { margin: 6px 0 6px; font-size: 22px; letter-spacing: -0.01em; }
 .sheet-subtitle { margin: 0 auto; color: var(--muted-2); font-size: 13px; max-width: 46ch; }
 
 .sheet-body { padding: 14px 18px 6px; }
-
-/* Pretty input: no dashed/solid borders, just soft glass and glow on focus */
 .pretty-input {
   display: flex; align-items: center; gap: 8px;
   background: rgba(255,255,255,0.07);
-  border: none; /* remove lines */
+  border: none;
   border-radius: 16px; padding: 10px 10px 10px 14px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
 }
 .pretty-input:focus-within {
-  box-shadow:
-    0 0 0 2px rgba(214,168,255,0.35) inset,
-    0 10px 30px rgba(214,168,255,0.20);
+  box-shadow: 0 0 0 2px rgba(214,168,255,0.35) inset, 0 10px 30px rgba(214,168,255,0.20);
 }
-.pretty-input input {
-  background: transparent; border: 0; padding: 10px 6px; font-size: 16px; flex: 1 1 auto; color: var(--text);
-}
+.pretty-input input { background: transparent; border: 0; padding: 10px 6px; font-size: 16px; flex: 1 1 auto; color: var(--text); }
 .pretty-input input::placeholder { color: #f2e6f3; opacity: 0.6; }
 
-/* Pills for Paste/Reveal */
 .token-tools { display: flex; gap: 6px; }
 .chip {
   appearance: none; border: 0; border-radius: 999px; padding: 8px 12px; cursor: pointer; font-weight: 700; font-size: 12px;
   color: #2a1030; background: var(--btn); box-shadow: 0 6px 18px rgba(214,168,255,0.35);
 }
-.chip:active { transform: translateY(1px); }
 
-/* Sticky footer without border line; soft glass ramp */
 .sheet-footer { padding: 12px 18px 16px; }
 .sheet-footer.sticky {
   position: sticky; bottom: 0;
   background: linear-gradient(180deg, rgba(13,11,18,0), rgba(13,11,18,0.35) 18%, rgba(13,11,18,0.65) 60%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-top: none; /* remove line */
+  border-top: none;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
-
-/* ============ /magical token sheet ============ */
 
 /* Toast */
 .toast {
