@@ -23,9 +23,33 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- 1s magical loading: soft burst from center -->
+  <!-- 1s magical loading: soft star burst from center -->
   <div id="loadingScreen" class="loading-screen" aria-hidden="true">
-    <div class="pulse"></div>
+    <div class="star-burst" role="img" aria-label="Loading">
+      <svg class="star" viewBox="0 0 200 200" width="200" height="200" aria-hidden="true">
+        <defs>
+          <radialGradient id="g" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+            <stop offset="35%" stop-color="#f6a7d9" stop-opacity="0.9"/>
+            <stop offset="70%" stop-color="#a98bff" stop-opacity="0.8"/>
+            <stop offset="100%" stop-color="#a98bff" stop-opacity="0.0"/>
+          </radialGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <polygon filter="url(#glow)" fill="url(#g)"
+          points="100,18 120,74 180,74 132,112 150,174 100,138 50,174 68,112 20,74 80,74" />
+      </svg>
+      <span class="spark s1"></span>
+      <span class="spark s2"></span>
+      <span class="spark s3"></span>
+      <span class="spark s4"></span>
+    </div>
   </div>
 
   <!-- Aurora background magic -->
@@ -69,7 +93,7 @@
         </div>
         <p id="composeHint" class="hint">Your note travels to your secret constellation (a JSON file in your GitHub repo) when you press send.</p>
 
-        <!-- Settings icon moved below the hint -->
+        <!-- Settings icon moved below the hint (left-aligned) -->
         <div class="under-hint">
           <button id="settingsBtn" class="icon-chip" aria-label="Open settings">⚙️ Settings</button>
         </div>

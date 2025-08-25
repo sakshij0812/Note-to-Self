@@ -28,7 +28,7 @@ body{
   text-rendering: optimizeLegibility;
 }
 
-/* 1s magical loading — center pulse */
+/* 1s magical loading — center star burst */
 .loading-screen{
   position: fixed; inset: 0; z-index: 9999; pointer-events: none;
   display:flex; align-items:center; justify-content:center;
@@ -37,26 +37,56 @@ body{
   visibility: visible;
 }
 .loading-screen.hide{ opacity: 0; visibility: hidden; }
-.loading-screen .pulse{
-  width: 220px; height: 220px; border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(246,167,217,0.85), rgba(246,167,217,0.0) 60%),
-    radial-gradient(circle at 50% 50%, rgba(169,139,255,0.55), rgba(169,139,255,0.0) 70%),
-    radial-gradient(circle at 50% 50%, rgba(110,231,231,0.35), rgba(110,231,231,0.0) 80%);
-  box-shadow:
-    0 0 40px 10px rgba(246,167,217,0.35),
-    0 0 100px 30px rgba(169,139,255,0.25);
+.star-burst{
+  position: relative; width: 220px; height: 220px;
+  display:grid; place-items:center;
+  animation: rise 1s ease-out forwards;
+}
+@keyframes rise{
+  from{ transform: translateY(4px); opacity: 0.98; }
+  to{ transform: translateY(0); opacity: 1; }
+}
+.star{
+  transform-origin: 50% 50%;
+  animation: starZoom 1s ease-out forwards;
+}
+@keyframes starZoom{
+  0%   { transform: scale(0.55) rotate(0deg);   opacity: 1;   filter: saturate(120%); }
+  60%  { transform: scale(1.05) rotate(3deg);   opacity: 0.7; filter: saturate(140%); }
+  100% { transform: scale(1.7)  rotate(6deg);   opacity: 0;   filter: saturate(120%); }
+}
+/* subtle halo ring around the star */
+.star-burst::after{
+  content:"";
+  position:absolute; inset:0; margin:auto; width: 160px; height:160px; border-radius:50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.0) 60%);
   filter: blur(2px);
-  animation: burst 1s ease-out forwards;
+  animation: ringOut 1s ease-out forwards;
 }
-@keyframes burst{
-  0%   { transform: scale(0.35); opacity: 0.95; filter: blur(2px); }
-  60%  { transform: scale(1.05); opacity: 0.6;  filter: blur(3px); }
-  100% { transform: scale(1.6);  opacity: 0;    filter: blur(6px); }
+@keyframes ringOut{
+  from{ transform: scale(0.6); opacity: 0.7; }
+  to  { transform: scale(1.8); opacity: 0; }
 }
+/* tiny sparkles drifting out */
+.spark{
+  position:absolute; left:50%; top:50%; width:8px; height:8px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #fff 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+  opacity: .9;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
+  animation: sparkFly .9s ease-out forwards;
+}
+@keyframes sparkFly{
+  to{ transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.15); opacity: 0; }
+}
+.s1{ --tx: -44px; --ty: -8px; }
+.s2{ --tx:  36px; --ty: -26px; }
+.s3{ --tx:  14px; --ty:  42px; }
+.s4{ --tx: -24px; --ty:  36px; }
 
 @media (prefers-reduced-motion: reduce){
-  .loading-screen .pulse{ animation-duration: 0.01ms; animation-iteration-count: 1; }
+  .star, .star-burst::after, .spark{ animation-duration: 0.01ms; animation-iteration-count: 1; }
 }
 
 /* Background aurora */
@@ -168,8 +198,9 @@ input:focus, textarea:focus{ border-color: #ffd0f0; box-shadow: 0 0 0 6px rgba(2
 
 .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 
+/* Settings under-hint — left aligned */
 .under-hint{
-  display:flex; justify-content:center; margin: 6px 0 0;
+  display:flex; justify-content:flex-start; align-items:center; margin: 8px 0 0;
 }
 .icon-chip{
   appearance:none; border:1px solid rgba(255,255,255,0.35); outline:none; cursor:pointer;
