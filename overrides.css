@@ -25,3 +25,71 @@
 
 /* Optional: dialogs align nicely without colliding with top inset */
 .modal{ margin-top: max(10px, calc(var(--safe-top) + 6px)); }
+
+/* ---------------------------------------------------------- */
+/* Loader/starburst overrides — make the burst cover more screen */
+/* ---------------------------------------------------------- */
+
+/* Stronger full-screen veil while loading */
+.loading-screen{
+  /* Wider, denser radial to feel more “full” */
+  background:
+    radial-gradient(80vmax 80vmax at 50% 50%, rgba(255,255,255,0.50), rgba(255,255,255,0.70)),
+    radial-gradient(80vmax 80vmax at 50% 50%, rgba(13,10,20,0.08), rgba(13,10,20,0.16));
+}
+@media (prefers-color-scheme: dark){
+  .loading-screen{
+    background: radial-gradient(90vmax 90vmax at 50% 50%, rgba(13,10,20,0.92), rgba(13,10,20,0.99));
+  }
+}
+
+/* Make the starburst container larger and scale the outward travel much farther */
+.stardust-burst{
+  /* Scale travel distance of particles (multiplies the inline --tx/--ty values) */
+  --burst: 6; /* 6x the original throw distance */
+  /* Grow the visual footprint substantially */
+  width: min(80vmin, 720px);
+  height: min(80vmin, 720px);
+}
+
+/* Beef up particle size and glow so they read at a larger scale, and extend duration */
+.dust{
+  width: 6px;
+  height: 6px;
+  animation-duration: 1400ms; /* was 1000ms */
+  box-shadow:
+    0 0 10px rgba(255,255,255,0.95),
+    0 0 22px rgba(169,139,255,0.45),
+    0 0 40px rgba(246,167,217,0.35);
+}
+.dust.sm{
+  width: 4px;
+  height: 4px;
+  animation-duration: 1200ms;
+  box-shadow:
+    0 0 8px rgba(255,255,255,0.90),
+    0 0 18px rgba(169,139,255,0.38);
+}
+
+/* Multiply the travel distance by --burst so the burst covers more screen */
+@keyframes dustOut{
+  0%   { transform: translate(-50%, -50%) scale(0.8); opacity: 0.95; }
+  70%  { opacity: .5; }
+  100% {
+    transform:
+      translate(
+        calc(-50% + (var(--tx) * var(--burst, 1))),
+        calc(-50% + (var(--ty) * var(--burst, 1)))
+      )
+      scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* Respect reduced-motion: keep animations effectively disabled if user prefers it */
+@media (prefers-reduced-motion: reduce){
+  .dust{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
