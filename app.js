@@ -11,13 +11,13 @@ const FILE_PATH = 'data/emails.json';
 
 const GH_API = 'https://api.github.com';
 const API_HEADERS = (token) => ({
-  Accept: 'application/vnd.github+json',
-  Authorization: `token ${token}`,
+  'Accept': 'application/vnd.github+json',
+  'Authorization': `token ${token}`,
   'X-GitHub-Api-Version': '2022-11-28',
 });
 
 let magicToken = null; // lives in memory
-let emails = []; // local cache (UI only)
+let emails = []; // local cache
 let currentSha = null; // sha of the JSON file (if exists)
 let openedId = null; // track by id instead of index for safety
 
@@ -33,13 +33,7 @@ const decode64 = (b64) => {
     return '';
   }
 };
-const datePretty = (iso) =>
-  new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-
-// Ensure path is URL-safe but preserves slashes
-function encodedPath(p) {
-  return p.split('/').map(encodeURIComponent).join('/');
-}
+const datePretty = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
 // Token storage
 function loadToken() {
@@ -56,52 +50,35 @@ function forgetToken() {
   localStorage.removeItem('magicToken');
 }
 
-// GitHub Contents API: get file (always live, no-cache)
+// GitHub Contents API: get file
 async function getEmailsFile() {
-  const path = encodedPath(FILE_PATH);
-  const baseUrl = `${GH_API}/repos/${OWNER}/${REPO}/contents/${path}`;
-  const metaUrl = `${baseUrl}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;
-
-  // Request the metadata/content blob first (provides file sha)
-  const res = await fetch(metaUrl, {
-    headers: API_HEADERS(magicToken),
-    cache: 'no-store', // bypass HTTP cache entirely
-  });
-
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURI(FILE_PATH)}?ref=${encodeURIComponent(BRANCH)}`;
+  const res = await fetch(url, { headers: API_HEADERS(magicToken) });
   if (res.status === 404) {
     currentSha = null;
     return { exists: false, emails: [] };
   }
   if (!res.ok) {
     const t = await res.text();
-    throw buildHttpError(res.status, `Could not reach your constellation: ${res.status} ${t}`);
+    throw new Error(`Could not reach your constellation: ${res.status} ${t}`);
   }
 
+  // Try metadata + base64 first (gives us sha)
   const json = await res.json();
   currentSha = json.sha || null;
-
-  // Try to decode the base64 content
   let content = decode64(json.content || '');
+
+  // If parsing fails, try raw media type as a fallback
   let parsed;
   try {
     parsed = JSON.parse(content);
   } catch {
-    // Fallback: explicitly ask for raw with no-store + another cache buster
-    const rawUrl = `${baseUrl}?ref=${encodeURIComponent(BRANCH)}&raw_ts=${Date.now()}`;
-    const rawRes = await fetch(rawUrl, {
-      headers: {
-        ...API_HEADERS(magicToken),
-        Accept: 'application/vnd.github.v3.raw',
-      },
-      cache: 'no-store',
+    const rawRes = await fetch(url, {
+      headers: { ...API_HEADERS(magicToken), Accept: 'application/vnd.github.v3.raw' }
     });
     if (rawRes.ok) {
       content = await rawRes.text();
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-        parsed = null;
-      }
+      try { parsed = JSON.parse(content); } catch { parsed = null; }
     }
   }
 
@@ -116,17 +93,9 @@ async function getEmailsFile() {
   return { exists: true, emails: [] };
 }
 
-// Helper to make Error with status
-function buildHttpError(status, message) {
-  const err = new Error(message);
-  err.status = status;
-  return err;
-}
-
 // GitHub Contents API: put file
 async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 💌') {
-  const path = encodedPath(FILE_PATH);
-  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${path}`;
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURI(FILE_PATH)}`;
   const body = {
     message,
     content: encode64(JSON.stringify(nextEmails, null, 2)),
@@ -141,50 +110,31 @@ async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-    cache: 'no-store',
   });
 
   if (!res.ok) {
     const t = await res.text();
-    throw buildHttpError(res.status, `The stars hesitated: ${res.status} ${t}`);
+    throw new Error(`The stars hesitated: ${res.status} ${t}`);
   }
   const json = await res.json();
   currentSha = json.content?.sha || currentSha;
   return json;
 }
 
-// Retry wrapper to handle race conditions (sha mismatch / 409)
-async function tryPutEmails(computeNextFromLatest, message) {
-  try {
-    const latest = await getEmailsFile(); // always fresh
-    const next = computeNextFromLatest(latest.emails || []);
-    return await putEmailsFile(next, message);
-  } catch (e) {
-    // If failure may be due to SHA mismatch or fast updates, retry once
-    if (e && (e.status === 409 || e.status === 422 || ('' + e.message).includes('sha'))) {
-      const latest = await getEmailsFile();
-      const next = computeNextFromLatest(latest.emails || []);
-      return await putEmailsFile(next, `${message} (retry)`);
-    }
-    throw e;
-  }
-}
-
 // UI wiring
 function setupTabs() {
   const tabs = $$('.tab');
-  tabs.forEach((btn) => {
+  tabs.forEach(btn => {
     btn.addEventListener('click', () => {
-      tabs.forEach((b) => b.classList.remove('active'));
+      tabs.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const tab = btn.getAttribute('data-tab');
-      $$('.panel').forEach((p) => p.classList.remove('active'));
+      $$('.panel').forEach(p => p.classList.remove('active'));
       if (tab === 'compose') {
         $('#composePanel').classList.add('active');
       } else {
         $('#inboxPanel').classList.add('active');
-        // Always re-fetch fresh when opening Inbox
-        refreshInbox(true);
+        refreshInbox();
       }
     });
   });
@@ -203,33 +153,32 @@ function renderInbox() {
       <div class="card glass" style="padding:16px; text-align:center;">
         <p>No letters yet. Your sky awaits its first sparkle 💖</p>
       </div>`;
-  } else {
-    const list = [...emails].sort((a, b) =>
-      (b.createdAt || '').localeCompare(a.createdAt || '')
-    );
-    const tpl = $('#cardTemplate');
-
-    list.forEach((e, idx) => {
-      const node = tpl.content.cloneNode(true);
-      const card = $('.note-card', node);
-      $('.note-title', node).textContent = e.title || '(Untitled)';
-      $('.note-preview', node).textContent = (e.body || '').slice(0, 200);
-      $('.date', node).textContent = datePretty(e.createdAt || new Date().toISOString());
-      $('.read-btn', node).addEventListener('click', () => openReader(e));
-      grid.appendChild(node);
-      const hues = ['#ffd9f2', '#e3d5ff', '#caffff', '#ffe7c2'];
-      const pick = hues[idx % hues.length];
-      card.style.border = '1px solid rgba(255,255,255,0.35)';
-      card.style.backgroundImage = `radial-gradient(220px 90px at 90% -10%, ${pick}55, transparent 60%)`;
-    });
+    return;
   }
+  // Show most recent first
+  const list = [...emails].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const tpl = $('#cardTemplate');
+
+  list.forEach((e, idx) => {
+    const node = tpl.content.cloneNode(true);
+    const card = $('.note-card', node);
+    $('.note-title', node).textContent = e.title || '(Untitled)';
+    $('.note-preview', node).textContent = (e.body || '').slice(0, 200);
+    $('.date', node).textContent = datePretty(e.createdAt || new Date().toISOString());
+    $('.read-btn', node).addEventListener('click', () => openReader(e));
+    grid.appendChild(node);
+    // sprinkle pastel accents
+    const hues = ['#ffd9f2', '#e3d5ff', '#caffff', '#ffe7c2'];
+    const pick = hues[idx % hues.length];
+    card.style.border = '1px solid rgba(255,255,255,0.35)';
+    card.style.backgroundImage = `radial-gradient(220px 90px at 90% -10%, ${pick}55, transparent 60%)`;
+  });
 }
 
-async function refreshInbox(showLoading = false) {
+async function refreshInbox() {
   const status = $('#inboxStatus');
-  if (showLoading) sparkleStatus(status, 'Calling friendly fireflies...');
+  sparkleStatus(status, 'Calling friendly fireflies...');
   try {
-    // Always live fetch
     const res = await getEmailsFile();
     emails = res.emails;
     sparkleStatus(status, `Fetched ${emails.length} letters ✨`);
@@ -244,20 +193,18 @@ function openReader(email) {
   $('#readerTitle').textContent = email.title || '(Untitled)';
   $('#readerBody').textContent = email.body || '';
   const dlg = $('#readerModal');
-  if (typeof dlg.showModal === 'function') dlg.showModal();
-  else dlg.setAttribute('open', '');
+  if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
 }
 
 function closeReader() {
   const dlg = $('#readerModal');
-  if (typeof dlg.close === 'function') dlg.close();
-  else dlg.removeAttribute('open');
+  if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
   openedId = null;
 }
 
 function shareCurrent() {
   if (!openedId) return;
-  const e = emails.find((x) => x.id === openedId);
+  const e = emails.find(x => x.id === openedId);
   if (!e) return;
   const text = `💌 ${e.title}\n\n${e.body}`;
   if (navigator.share) {
@@ -273,11 +220,12 @@ async function deleteCurrent() {
   if (!confirm('Gently release this letter into the night?')) return;
   const composeStatus = $('#composeStatus');
   try {
-    await tryPutEmails(
-      (latest) => latest.filter((x) => x.id !== openedId),
-      'chore: release a letter into the night 🌙'
-    );
-    await refreshInbox(true); // force live re-fetch
+    const res = await getEmailsFile();
+    const list = res.emails;
+    const after = list.filter(x => x.id !== openedId);
+    await putEmailsFile(after, 'chore: release a letter into the night 🌙');
+    emails = after;
+    renderInbox();
     closeReader();
     sparkleTrail();
     sparkleStatus(composeStatus, 'Letter released with grace 🌙');
@@ -287,6 +235,7 @@ async function deleteCurrent() {
 }
 
 function sparkleTrail() {
+  // Tiny ephemeral sparkle effect near the send button
   const btn = $('#sendBtn');
   if (!btn) return;
   const burst = document.createElement('span');
@@ -294,7 +243,7 @@ function sparkleTrail() {
   burst.innerHTML = '✨';
   const rect = btn.getBoundingClientRect();
   burst.style.position = 'fixed';
-  burst.style.left = `${rect.left + rect.width / 2}px`;
+  burst.style.left = `${rect.left + rect.width/2}px`;
   burst.style.top = `${rect.top}px`;
   burst.style.pointerEvents = 'none';
   burst.style.animation = 'burst 800ms ease forwards';
@@ -325,47 +274,32 @@ async function onSend() {
   sparkleStatus(status, 'Sending with stardust…');
 
   const newEmail = {
-    id:
-      crypto && crypto.randomUUID
-        ? crypto.randomUUID()
-        : String(Date.now()) + Math.random().toString(16).slice(2),
+    id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
     title,
     body,
     createdAt: new Date().toISOString(),
   };
 
   try {
-    await tryPutEmails(
-      (latest) => {
-        // Avoid duplicate id if we retried
-        const exists = latest.some((x) => x.id === newEmail.id);
-        return exists ? latest : [...latest, newEmail];
-      },
-      'chore: add a magical letter 💌'
-    );
-    await refreshInbox(true); // force live refresh so UI is always current
+    const res = await getEmailsFile();
+    const next = [...res.emails, newEmail];
+    await putEmailsFile(next, 'chore: add a magical letter 💌');
+    emails = next;
+    renderInbox();
     sparkleStatus(status, 'Your letter is shining in the night sky ✨');
     sparkleTrail();
     $('#mailTitle').value = '';
     $('#mailBody').value = '';
     // switch to inbox
-    $$('[data-tab]').forEach((b) => b.classList.remove('active'));
+    $$('[data-tab]').forEach(b => b.classList.remove('active'));
     $$('[data-tab="inbox"]')[0].classList.add('active');
-    $$('.panel').forEach((p) => p.classList.remove('active'));
+    $$('.panel').forEach(p => p.classList.remove('active'));
     $('#inboxPanel').classList.add('active');
   } catch (e) {
     if (String(e.message).includes('403')) {
-      sparkleStatus(
-        status,
-        'Your Magic Key can read the stars but not write. Grant “Contents: Read and write” to your token and try again 💫',
-        'error'
-      );
+      sparkleStatus(status, 'Your Magic Key can read the stars but not write. Grant “Contents: Read and write” to your token and try again 💫', 'error');
     } else if (String(e.message).includes('404')) {
-      sparkleStatus(
-        status,
-        'Could not find your constellation (repo or branch). Make sure it exists ✨',
-        'error'
-      );
+      sparkleStatus(status, 'Could not find your constellation (repo or branch). Make sure it exists ✨', 'error');
     } else {
       sparkleStatus(status, e.message, 'error');
     }
@@ -390,8 +324,7 @@ function openTokenModal(force = false) {
 }
 function closeTokenModal() {
   const dlg = $('#tokenModal');
-  if (typeof dlg.close === 'function') dlg.close();
-  else dlg.removeAttribute('open');
+  if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
 }
 
 function setupSettings() {
@@ -417,43 +350,39 @@ function setupSettings() {
 function setupUpdateFlow() {
   if (!('serviceWorker' in navigator)) return;
 
-  navigator.serviceWorker
-    .register('./sw.js')
-    .then((reg) => {
-      // If there's an update already waiting when the page loads
-      if (reg.waiting) {
-        showUpdateModal(reg);
-      }
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    // If there's an update already waiting when the page loads
+    if (reg.waiting) {
+      showUpdateModal(reg);
+    }
 
-      // Listen for new updates
-      reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // New update installed, waiting to activate
-            showUpdateModal(reg);
-          }
-        });
+    // Listen for new updates
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // New update installed, waiting to activate
+          showUpdateModal(reg);
+        }
       });
+    });
 
-      // After we tell the waiting SW to activate, reload once controlled by it
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return;
-        refreshing = true;
-        window.location.reload();
-      });
-    })
-    .catch(() => {});
+    // After we tell the waiting SW to activate, reload once controlled by it
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  }).catch(() => {});
 }
 
 function showUpdateModal(reg) {
   const dlg = $('#updateModal');
   if (!dlg) return;
 
-  const close = () =>
-    typeof dlg.close === 'function' ? dlg.close() : dlg.removeAttribute('open');
+  const close = () => (typeof dlg.close === 'function' ? dlg.close() : dlg.removeAttribute('open'));
   const updateNow = () => {
     if (reg.waiting) {
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -461,9 +390,9 @@ function showUpdateModal(reg) {
     close();
   };
 
-  $('#updateNowBtn')?.addEventListener('click', updateNow, { once: true });
-  $('#updateLaterBtn')?.addEventListener('click', close, { once: true });
-  $('#closeUpdate')?.addEventListener('click', close, { once: true });
+  $('#updateNowBtn').onclick = updateNow;
+  $('#updateLaterBtn').onclick = close;
+  $('#closeUpdate').onclick = close;
 
   if (typeof dlg.showModal === 'function') dlg.showModal();
   else dlg.setAttribute('open', '');
@@ -487,12 +416,12 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!t) return;
     saveToken(t, remember);
     closeTokenModal();
-    refreshInbox(true);
+    refreshInbox();
   });
 
   $('#sendBtn').addEventListener('click', onSend);
   $('#clearBtn').addEventListener('click', onClear);
-  $('#refreshBtn').addEventListener('click', () => refreshInbox(true));
+  $('#refreshBtn').addEventListener('click', refreshInbox);
   $('#closeReader').addEventListener('click', closeReader);
   $('#shareBtn').addEventListener('click', shareCurrent);
   $('#deleteBtn').addEventListener('click', deleteCurrent);
@@ -503,23 +432,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const showNote = () => alert('An S² Labs Product');
     credit.addEventListener('click', showNote);
     credit.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter' || ev.key === ' ') {
-        ev.preventDefault();
-        showNote();
-      }
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); showNote(); }
     });
     credit.style.cursor = 'pointer';
   }
 
-  // Live refresh when the app regains focus
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      refreshInbox();
-    }
-  });
-
-  // Preload inbox if token present (live)
-  if (magicToken) refreshInbox(true);
+  // Preload inbox if token present
+  if (magicToken) refreshInbox();
 
   // Register service worker with "update available" flow
   setupUpdateFlow();
