@@ -14,13 +14,10 @@ const API_HEADERS = (token) => ({
   Accept: 'application/vnd.github+json',
   Authorization: `token ${token}`,
   'X-GitHub-Api-Version': '2022-11-28',
-  // Strong anti-cache hints for all cross-origin GitHub API requests
-  'Cache-Control': 'no-cache',
-  Pragma: 'no-cache',
 });
 
 let magicToken = null; // lives in memory
-let emails = []; // local cache
+let emails = []; // local cache (UI only)
 let currentSha = null; // sha of the JSON file (if exists)
 let openedId = null; // track by id instead of index for safety
 
@@ -39,6 +36,11 @@ const decode64 = (b64) => {
 const datePretty = (iso) =>
   new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
+// Ensure path is URL-safe but preserves slashes
+function encodedPath(p) {
+  return p.split('/').map(encodeURIComponent).join('/');
+}
+
 // Token storage
 function loadToken() {
   const remembered = localStorage.getItem('magicToken');
@@ -56,9 +58,9 @@ function forgetToken() {
 
 // GitHub Contents API: get file (always live, no-cache)
 async function getEmailsFile() {
-  const ts = Date.now(); // cache-buster for any intermediate caches/CDNs
-  const baseUrl = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURI(FILE_PATH)}`;
-  const metaUrl = `${baseUrl}?ref=${encodeURIComponent(BRANCH)}&ts=${ts}`;
+  const path = encodedPath(FILE_PATH);
+  const baseUrl = `${GH_API}/repos/${OWNER}/${REPO}/contents/${path}`;
+  const metaUrl = `${baseUrl}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;
 
   // Request the metadata/content blob first (provides file sha)
   const res = await fetch(metaUrl, {
@@ -72,7 +74,7 @@ async function getEmailsFile() {
   }
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`Could not reach your constellation: ${res.status} ${t}`);
+    throw buildHttpError(res.status, `Could not reach your constellation: ${res.status} ${t}`);
   }
 
   const json = await res.json();
@@ -114,9 +116,17 @@ async function getEmailsFile() {
   return { exists: true, emails: [] };
 }
 
+// Helper to make Error with status
+function buildHttpError(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+}
+
 // GitHub Contents API: put file
 async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 💌') {
-  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURI(FILE_PATH)}`;
+  const path = encodedPath(FILE_PATH);
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${path}`;
   const body = {
     message,
     content: encode64(JSON.stringify(nextEmails, null, 2)),
@@ -136,11 +146,28 @@ async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 
 
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`The stars hesitated: ${res.status} ${t}`);
+    throw buildHttpError(res.status, `The stars hesitated: ${res.status} ${t}`);
   }
   const json = await res.json();
   currentSha = json.content?.sha || currentSha;
   return json;
+}
+
+// Retry wrapper to handle race conditions (sha mismatch / 409)
+async function tryPutEmails(computeNextFromLatest, message) {
+  try {
+    const latest = await getEmailsFile(); // always fresh
+    const next = computeNextFromLatest(latest.emails || []);
+    return await putEmailsFile(next, message);
+  } catch (e) {
+    // If failure may be due to SHA mismatch or fast updates, retry once
+    if (e && (e.status === 409 || e.status === 422 || ('' + e.message).includes('sha'))) {
+      const latest = await getEmailsFile();
+      const next = computeNextFromLatest(latest.emails || []);
+      return await putEmailsFile(next, `${message} (retry)`);
+    }
+    throw e;
+  }
 }
 
 // UI wiring
@@ -246,13 +273,11 @@ async function deleteCurrent() {
   if (!confirm('Gently release this letter into the night?')) return;
   const composeStatus = $('#composeStatus');
   try {
-    // Always start from a live copy to prevent double-delete mismatches
-    const res = await getEmailsFile();
-    const list = res.emails;
-    const after = list.filter((x) => x.id !== openedId);
-    await putEmailsFile(after, 'chore: release a letter into the night 🌙');
-    // After write, force a fresh re-fetch to avoid any stale caches
-    await refreshInbox(true);
+    await tryPutEmails(
+      (latest) => latest.filter((x) => x.id !== openedId),
+      'chore: release a letter into the night 🌙'
+    );
+    await refreshInbox(true); // force live re-fetch
     closeReader();
     sparkleTrail();
     sparkleStatus(composeStatus, 'Letter released with grace 🌙');
@@ -310,10 +335,14 @@ async function onSend() {
   };
 
   try {
-    // Start from live, append, write, then re-fetch live again
-    const res = await getEmailsFile();
-    const next = [...res.emails, newEmail];
-    await putEmailsFile(next, 'chore: add a magical letter 💌');
+    await tryPutEmails(
+      (latest) => {
+        // Avoid duplicate id if we retried
+        const exists = latest.some((x) => x.id === newEmail.id);
+        return exists ? latest : [...latest, newEmail];
+      },
+      'chore: add a magical letter 💌'
+    );
     await refreshInbox(true); // force live refresh so UI is always current
     sparkleStatus(status, 'Your letter is shining in the night sky ✨');
     sparkleTrail();
@@ -432,9 +461,9 @@ function showUpdateModal(reg) {
     close();
   };
 
-  $('#updateNowBtn').onclick = updateNow;
-  $('#updateLaterBtn').onclick = close;
-  $('#closeUpdate').onclick = close;
+  $('#updateNowBtn')?.addEventListener('click', updateNow, { once: true });
+  $('#updateLaterBtn')?.addEventListener('click', close, { once: true });
+  $('#closeUpdate')?.addEventListener('click', close, { once: true });
 
   if (typeof dlg.showModal === 'function') dlg.showModal();
   else dlg.setAttribute('open', '');
