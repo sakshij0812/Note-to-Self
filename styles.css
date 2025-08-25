@@ -28,65 +28,59 @@ body{
   text-rendering: optimizeLegibility;
 }
 
-/* 1s magical loading — center star burst */
+/* 1s magical loading — subtle star dust burst from center */
 .loading-screen{
   position: fixed; inset: 0; z-index: 9999; pointer-events: none;
   display:flex; align-items:center; justify-content:center;
-  background: radial-gradient(60vmax 60vmax at 50% 50%, rgba(13,10,20,0.9), rgba(13,10,20,0.98));
+  background: radial-gradient(60vmax 60vmax at 50% 50%, rgba(13,10,20,0.92), rgba(13,10,20,0.98));
   opacity: 1; transition: opacity .35s ease, visibility .35s ease;
   visibility: visible;
 }
 .loading-screen.hide{ opacity: 0; visibility: hidden; }
-.star-burst{
-  position: relative; width: 220px; height: 220px;
+
+.burst{
+  position: relative; width: 180px; height: 180px;
   display:grid; place-items:center;
-  animation: rise 1s ease-out forwards;
 }
-@keyframes rise{
-  from{ transform: translateY(4px); opacity: 0.98; }
-  to{ transform: translateY(0); opacity: 1; }
+.burst-core{
+  width: 160px; height: 160px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.0) 40%),
+    radial-gradient(circle at 50% 50%, rgba(246,167,217,0.75) 0%, rgba(246,167,217,0.0) 62%),
+    radial-gradient(circle at 50% 50%, rgba(169,139,255,0.55) 0%, rgba(169,139,255,0.0) 80%);
+  box-shadow:
+    0 0 30px 12px rgba(246,167,217,0.28),
+    0 0 80px 30px rgba(169,139,255,0.20);
+  filter: blur(1px);
+  animation: corePop 1s ease-out forwards;
 }
-.star{
-  transform-origin: 50% 50%;
-  animation: starZoom 1s ease-out forwards;
+@keyframes corePop{
+  0%   { transform: scale(0.5); opacity: 0.95; filter: blur(1px); }
+  60%  { transform: scale(1.05); opacity: 0.6;  filter: blur(2px); }
+  100% { transform: scale(1.6);  opacity: 0;    filter: blur(4px); }
 }
-@keyframes starZoom{
-  0%   { transform: scale(0.55) rotate(0deg);   opacity: 1;   filter: saturate(120%); }
-  60%  { transform: scale(1.05) rotate(3deg);   opacity: 0.7; filter: saturate(140%); }
-  100% { transform: scale(1.7)  rotate(6deg);   opacity: 0;   filter: saturate(120%); }
-}
-/* subtle halo ring around the star */
-.star-burst::after{
-  content:"";
-  position:absolute; inset:0; margin:auto; width: 160px; height:160px; border-radius:50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.0) 60%);
-  filter: blur(2px);
-  animation: ringOut 1s ease-out forwards;
-}
-@keyframes ringOut{
-  from{ transform: scale(0.6); opacity: 0.7; }
-  to  { transform: scale(1.8); opacity: 0; }
-}
-/* tiny sparkles drifting out */
-.spark{
-  position:absolute; left:50%; top:50%; width:8px; height:8px;
-  transform: translate(-50%, -50%);
+
+/* tiny white star-dust dots */
+.dust{
+  position:absolute; left:50%; top:50%;
+  width:4px; height:4px; border-radius:50%;
+  transform: translate(-50%, -50%) scale(0.7);
   background: radial-gradient(circle, #fff 0%, rgba(255,255,255,0) 70%);
-  border-radius: 50%;
-  opacity: .9;
-  filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
-  animation: sparkFly .9s ease-out forwards;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.8));
+  opacity: 0.95;
+  animation: dustOut 1s ease-out forwards;
+  animation-delay: var(--d, 0ms);
 }
-@keyframes sparkFly{
-  to{ transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.15); opacity: 0; }
+@keyframes dustOut{
+  to{
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.1);
+    opacity: 0;
+    filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+  }
 }
-.s1{ --tx: -44px; --ty: -8px; }
-.s2{ --tx:  36px; --ty: -26px; }
-.s3{ --tx:  14px; --ty:  42px; }
-.s4{ --tx: -24px; --ty:  36px; }
 
 @media (prefers-reduced-motion: reduce){
-  .star, .star-burst::after, .spark{ animation-duration: 0.01ms; animation-iteration-count: 1; }
+  .burst-core, .dust{ animation-duration: 0.01ms; animation-iteration-count: 1; }
 }
 
 /* Background aurora */
@@ -200,9 +194,10 @@ input:focus, textarea:focus{ border-color: #ffd0f0; box-shadow: 0 0 0 6px rgba(2
 
 /* Settings under-hint — left aligned */
 .under-hint{
-  display:flex; justify-content:flex-start; align-items:center; margin: 8px 0 0;
+  display:block; margin: 8px 0 0; text-align: left;
 }
 .icon-chip{
+  display:inline-flex; align-items:center; gap:6px;
   appearance:none; border:1px solid rgba(255,255,255,0.35); outline:none; cursor:pointer;
   padding:8px 12px; border-radius:999px; font-weight:800; color:#27132a;
   background: linear-gradient(180deg, #ffffff, #f7efff);

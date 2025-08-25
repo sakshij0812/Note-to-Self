@@ -23,32 +23,27 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- 1s magical loading: soft star burst from center -->
+  <!-- 1s magical loading: subtle star dust burst from center -->
   <div id="loadingScreen" class="loading-screen" aria-hidden="true">
-    <div class="star-burst" role="img" aria-label="Loading">
-      <svg class="star" viewBox="0 0 200 200" width="200" height="200" aria-hidden="true">
-        <defs>
-          <radialGradient id="g" cx="50%" cy="50%" r="60%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
-            <stop offset="35%" stop-color="#f6a7d9" stop-opacity="0.9"/>
-            <stop offset="70%" stop-color="#a98bff" stop-opacity="0.8"/>
-            <stop offset="100%" stop-color="#a98bff" stop-opacity="0.0"/>
-          </radialGradient>
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        <polygon filter="url(#glow)" fill="url(#g)"
-          points="100,18 120,74 180,74 132,112 150,174 100,138 50,174 68,112 20,74 80,74" />
-      </svg>
-      <span class="spark s1"></span>
-      <span class="spark s2"></span>
-      <span class="spark s3"></span>
-      <span class="spark s4"></span>
+    <div class="burst" role="img" aria-label="Loading">
+      <div class="burst-core"></div>
+      <!-- Tiny star dust (white dots) flying outward -->
+      <span class="dust" style="--tx:-48px;--ty:-10px;--d:0ms;"></span>
+      <span class="dust" style="--tx:-32px;--ty:-34px;--d:20ms;"></span>
+      <span class="dust" style="--tx: 24px;--ty:-28px;--d:40ms;"></span>
+      <span class="dust" style="--tx: 42px;--ty:-12px;--d:60ms;"></span>
+      <span class="dust" style="--tx: 16px;--ty:  8px;--d:80ms;"></span>
+      <span class="dust" style="--tx:-20px;--ty: 14px;--d:100ms;"></span>
+      <span class="dust" style="--tx:-34px;--ty: 30px;--d:120ms;"></span>
+      <span class="dust" style="--tx: 10px;--ty: 36px;--d:140ms;"></span>
+      <span class="dust" style="--tx: 30px;--ty: 22px;--d:160ms;"></span>
+      <span class="dust" style="--tx:-10px;--ty:-22px;--d:180ms;"></span>
+      <span class="dust" style="--tx:  6px;--ty:-40px;--d:200ms;"></span>
+      <span class="dust" style="--tx:-6px; --ty: 40px;--d:220ms;"></span>
+      <span class="dust" style="--tx: 44px;--ty:  8px;--d:240ms;"></span>
+      <span class="dust" style="--tx:-44px;--ty: -2px;--d:260ms;"></span>
+      <span class="dust" style="--tx:  0px;--ty: 46px;--d:280ms;"></span>
+      <span class="dust" style="--tx:  0px;--ty:-46px;--d:300ms;"></span>
     </div>
   </div>
 
