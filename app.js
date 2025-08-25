@@ -1,8 +1,8 @@
 // Aurora Mailbox – PWA using GitHub Contents API as a cozy store ✨
 
 // Hardcoded constellation (change in code if you like)
-/* Per your request these are hardcoded. Ensure the repo exists and you (the token) have access:
-   - Repository permission → Contents: Read and write
+/* Ensure the repo exists and your token has:
+   - Repository permissions → Contents: Read and write
 */
 const OWNER = 'sakshij0812';
 const REPO = 'Note-to-Self-Data';
@@ -19,13 +19,20 @@ const API_HEADERS = (token) => ({
 let magicToken = null; // lives in memory
 let emails = []; // local cache
 let currentSha = null; // sha of the JSON file (if exists)
-let openedIndex = null;
+let openedId = null; // track by id instead of index for safety
 
 // Helpers
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const encode64 = (str) => btoa(unescape(encodeURIComponent(str)));
-const decode64 = (b64) => decodeURIComponent(escape(atob(b64)));
+const decode64 = (b64) => {
+  try {
+    const clean = String(b64 || '').replace(/\r?\n/g, '');
+    return decodeURIComponent(escape(atob(clean)));
+  } catch {
+    return '';
+  }
+};
 const datePretty = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
 // Token storage
@@ -45,7 +52,7 @@ function forgetToken() {
 
 // GitHub Contents API: get file
 async function getEmailsFile() {
-  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(FILE_PATH)}?ref=${encodeURIComponent(BRANCH)}`;
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURI(FILE_PATH)}?ref=${encodeURIComponent(BRANCH)}`;
   const res = await fetch(url, { headers: API_HEADERS(magicToken) });
   if (res.status === 404) {
     currentSha = null;
@@ -55,23 +62,40 @@ async function getEmailsFile() {
     const t = await res.text();
     throw new Error(`Could not reach your constellation: ${res.status} ${t}`);
   }
+
+  // Try metadata + base64 first (gives us sha)
   const json = await res.json();
   currentSha = json.sha || null;
-  const content = decode64(json.content || '');
+  let content = decode64(json.content || '');
+
+  // If parsing fails, try raw media type as a fallback
+  let parsed;
   try {
-    const parsed = JSON.parse(content);
-    if (Array.isArray(parsed)) {
-      return { exists: true, emails: parsed };
-    }
-    return { exists: true, emails: [] };
+    parsed = JSON.parse(content);
   } catch {
-    return { exists: true, emails: [] };
+    const rawRes = await fetch(url, {
+      headers: { ...API_HEADERS(magicToken), Accept: 'application/vnd.github.v3.raw' }
+    });
+    if (rawRes.ok) {
+      content = await rawRes.text();
+      try { parsed = JSON.parse(content); } catch { parsed = null; }
+    }
   }
+
+  if (Array.isArray(parsed)) {
+    return { exists: true, emails: parsed };
+  }
+  if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.emails)) return { exists: true, emails: parsed.emails };
+    // Support object maps {id: email, ...}
+    return { exists: true, emails: Object.values(parsed) };
+  }
+  return { exists: true, emails: [] };
 }
 
 // GitHub Contents API: put file
 async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 💌') {
-  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(FILE_PATH)}`;
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURI(FILE_PATH)}`;
   const body = {
     message,
     content: encode64(JSON.stringify(nextEmails, null, 2)),
@@ -141,7 +165,7 @@ function renderInbox() {
     $('.note-title', node).textContent = e.title || '(Untitled)';
     $('.note-preview', node).textContent = (e.body || '').slice(0, 200);
     $('.date', node).textContent = datePretty(e.createdAt || new Date().toISOString());
-    $('.read-btn', node).addEventListener('click', () => openReader(e, idx));
+    $('.read-btn', node).addEventListener('click', () => openReader(e));
     grid.appendChild(node);
     // sprinkle pastel accents
     const hues = ['#ffd9f2', '#e3d5ff', '#caffff', '#ffe7c2'];
@@ -164,8 +188,8 @@ async function refreshInbox() {
   }
 }
 
-function openReader(email, index) {
-  openedIndex = index;
+function openReader(email) {
+  openedId = email.id || null;
   $('#readerTitle').textContent = email.title || '(Untitled)';
   $('#readerBody').textContent = email.body || '';
   const dlg = $('#readerModal');
@@ -175,12 +199,13 @@ function openReader(email, index) {
 function closeReader() {
   const dlg = $('#readerModal');
   if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
-  openedIndex = null;
+  openedId = null;
 }
 
 function shareCurrent() {
-  if (openedIndex == null) return;
-  const e = emails[openedIndex];
+  if (!openedId) return;
+  const e = emails.find(x => x.id === openedId);
+  if (!e) return;
   const text = `💌 ${e.title}\n\n${e.body}`;
   if (navigator.share) {
     navigator.share({ title: e.title || 'Aurora Mail', text });
@@ -191,14 +216,13 @@ function shareCurrent() {
 }
 
 async function deleteCurrent() {
-  if (openedIndex == null) return;
+  if (!openedId) return;
   if (!confirm('Gently release this letter into the night?')) return;
   const composeStatus = $('#composeStatus');
   try {
     const res = await getEmailsFile();
     const list = res.emails;
-    const target = emails[openedIndex];
-    const after = list.filter(x => x.id !== target.id);
+    const after = list.filter(x => x.id !== openedId);
     await putEmailsFile(after, 'chore: release a letter into the night 🌙');
     emails = after;
     renderInbox();
@@ -250,7 +274,7 @@ async function onSend() {
   sparkleStatus(status, 'Sending with stardust…');
 
   const newEmail = {
-    id: crypto.randomUUID(),
+    id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
     title,
     body,
     createdAt: new Date().toISOString(),
@@ -272,7 +296,6 @@ async function onSend() {
     $$('.panel').forEach(p => p.classList.remove('active'));
     $('#inboxPanel').classList.add('active');
   } catch (e) {
-    // Friendly guidance if token is read-only
     if (String(e.message).includes('403')) {
       sparkleStatus(status, 'Your Magic Key can read the stars but not write. Grant “Contents: Read and write” to your token and try again 💫', 'error');
     } else if (String(e.message).includes('404')) {
@@ -350,6 +373,17 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#closeReader').addEventListener('click', closeReader);
   $('#shareBtn').addEventListener('click', shareCurrent);
   $('#deleteBtn').addEventListener('click', deleteCurrent);
+
+  // Footer credit — shows a sweet note
+  const credit = $('#creditLink');
+  if (credit) {
+    const showNote = () => alert('An S² Labs Product');
+    credit.addEventListener('click', showNote);
+    credit.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); showNote(); }
+    });
+    credit.style.cursor = 'pointer';
+  }
 
   // Preload inbox if token present
   if (magicToken) refreshInbox();

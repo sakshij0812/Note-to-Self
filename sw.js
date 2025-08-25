@@ -1,5 +1,4 @@
-// Simple offline support for Aurora Mailbox ✨
-const CACHE = 'aurora-mailbox-v1';
+const CACHE = 'aurora-mailbox-v2';
 const ASSETS = [
   './',
   './index.html',
