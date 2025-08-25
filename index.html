@@ -130,38 +130,20 @@
     </form>
   </dialog>
 
-  <!-- Settings Modal -->
+  <!-- Settings Modal (Simplified: Magic Key only) -->
   <dialog id="settingsModal" class="modal glass">
     <div class="modal-header">
-      <h3>Settings ⚙️</h3>
+      <h3>Magic Key ✨</h3>
       <button id="closeSettings" class="icon-btn" aria-label="Close">✖️</button>
     </div>
-    <div class="settings-body">
-      <div class="grid2">
-        <label class="field">
-          <span>Owner</span>
-          <input id="ownerInput" type="text" value="the-rebooted-coder" disabled />
-        </label>
-        <label class="field">
-          <span>Repository</span>
-          <input id="repoInput" type="text" value="magic-mailbox" disabled />
-        </label>
-      </div>
-      <label class="field">
-        <span>Data File Path</span>
-        <input id="pathInput" type="text" value="data/emails.json" disabled />
-      </label>
-      <label class="field">
-        <span>Branch</span>
-        <input id="branchInput" type="text" value="main" disabled />
-      </label>
-
+    <div class="settings-body" style="padding: 0 14px 14px;">
+      <p class="soft">Manage your secret Magic Key (GitHub token) here.</p>
       <div class="sep"></div>
-
       <div class="grid2">
         <button id="reenterTokenBtn" class="btn">Re-enter Magic Key</button>
         <button id="forgetTokenBtn" class="btn danger">Forget Magic Key</button>
       </div>
+      <p class="hint">Your secret lives only on this device. Re-enter or forget it anytime.</p>
     </div>
   </dialog>
 
