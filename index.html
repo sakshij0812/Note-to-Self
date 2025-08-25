@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f6a7d9" />
-  <title>Aurora Mailbox ✨</title>
+  <title>Reflection</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
@@ -23,11 +23,9 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Tiny magical loading (1s shimmer) -->
+  <!-- 1s magical loading: soft burst from center -->
   <div id="loadingScreen" class="loading-screen" aria-hidden="true">
-    <div class="loading-aurora"></div>
-    <div class="loading-shimmer"></div>
-    <div class="loading-stars"></div>
+    <div class="pulse"></div>
   </div>
 
   <!-- Aurora background magic -->
@@ -38,13 +36,7 @@
     <span class="stars"></span>
   </div>
 
-  <header class="app-header glass">
-    <div class="brand">
-      <span class="logo" aria-label="Aurora Mailbox">🌸</span>
-      <!-- Title removed for a cleaner look -->
-    </div>
-    <button id="settingsBtn" class="icon-btn" aria-label="Open settings">⚙️</button>
-  </header>
+  <!-- Header removed for ultra-clean top bar -->
 
   <main class="container">
     <!-- Tabs -->
@@ -76,6 +68,12 @@
           <button id="clearBtn" class="btn ghost">Clear</button>
         </div>
         <p id="composeHint" class="hint">Your note travels to your secret constellation (a JSON file in your GitHub repo) when you press send.</p>
+
+        <!-- Settings icon moved below the hint -->
+        <div class="under-hint">
+          <button id="settingsBtn" class="icon-chip" aria-label="Open settings">⚙️ Settings</button>
+        </div>
+
         <p id="composeStatus" class="status"></p>
       </div>
     </section>
@@ -177,7 +175,7 @@
     <p id="creditLink" class="flip" role="button" tabindex="0" aria-label="Credits" aria-pressed="false">
       <span class="flip-inner">
         <span class="front">&lt;/&gt; with 🪄 by Spandan.</span>
-        <span class="back">An S² Labs Product 🥼</span>
+        <span class="back">An S² Labs Product</span>
       </span>
     </p>
   </footer>
