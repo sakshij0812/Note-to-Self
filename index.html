@@ -1,130 +1,354 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>My Aurora Inbox</title>
-  <meta name="theme-color" content="#ffbce1" />
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <div class="aurora-bg" aria-hidden="true"></div>
+// Aurora Inbox - Private build with hardcoded GitHub config and token.
+// IMPORTANT: Anyone who can load this site can view the token via DevTools or view-source.
+// Use only in a private environment (password-protected, private network, or behind access control).
 
-  <header class="site-header">
-    <div class="brand">
-      <span class="logo">✿</span>
-      <div class="titles">
-        <h1>Aurora Inbox</h1>
-        <p class="subtitle">Send little notes to yourself. Soft, simple, yours.</p>
-      </div>
-    </div>
-    <button class="settings-btn" id="openSettings" aria-label="Open settings">⚙︎</button>
-  </header>
+// 1) Fill these with your details before deploying.
+const CONFIG = {
+  owner: "YOUR_GITHUB_USERNAME",
+  repo: "YOUR_REPO_NAME",
+  branch: "main",
+  path: "emails.json",
+  // Fine-grained token with Repository permissions → Contents: Read and Write for this single repo.
+  token: "YOUR_FINE_GRAINED_TOKEN"
+};
 
-  <nav class="tabs" role="tablist" aria-label="Primary">
-    <button role="tab" aria-selected="true" aria-controls="composePanel" id="composeTab" class="tab active">Compose</button>
-    <button role="tab" aria-selected="false" aria-controls="inboxPanel" id="inboxTab" class="tab">Inbox</button>
-  </nav>
+// --- Do not edit below this line unless you know what you're doing ---
 
-  <main>
-    <section id="composePanel" role="tabpanel" aria-labelledby="composeTab" class="panel active">
-      <article class="card">
-        <h2>New Note</h2>
-        <form id="composeForm">
-          <div class="field">
-            <label for="title">Title</label>
-            <input id="title" name="title" type="text" required maxlength="120" placeholder="A tiny reminder..." />
-          </div>
-          <div class="field">
-            <label for="body">Message</label>
-            <textarea id="body" name="body" rows="8" required placeholder="Write something lovely to your future self..."></textarea>
-          </div>
-          <div class="actions">
-            <button type="submit" class="btn primary">Send to Myself</button>
-            <button type="button" id="clearForm" class="btn ghost">Clear</button>
-          </div>
-          <p class="hint">Notes are saved to your GitHub repo as a JSON file using your personal token. Keep your token private.</p>
-        </form>
-      </article>
-    </section>
+const qs = (s, el = document) => el.querySelector(s);
 
-    <section id="inboxPanel" role="tabpanel" aria-labelledby="inboxTab" class="panel">
-      <article class="card">
-        <div class="inbox-header">
-          <h2>Inbox</h2>
-          <div class="inbox-actions">
-            <button id="refreshInbox" class="btn small">Refresh</button>
-            <button id="exportJson" class="btn small ghost">Export JSON</button>
-          </div>
-        </div>
-        <div id="emptyState" class="empty">
-          <p>No notes yet. Write your first one on the Compose tab ✨</p>
-        </div>
-        <div id="inboxList" class="inbox-list" role="list"></div>
-      </article>
-    </section>
-  </main>
+const state = {
+  emails: [],
+  fileSha: null, // last known sha of JSON in repo
+  unreadLocal: new Set()
+};
 
-  <dialog id="settingsDialog" class="settings">
+const ui = {
+  tabs: {
+    compose: qs("#composeTab"),
+    inbox: qs("#inboxTab"),
+  },
+  panels: {
+    compose: qs("#composePanel"),
+    inbox: qs("#inboxPanel"),
+  },
+  composeForm: qs("#composeForm"),
+  clearForm: qs("#clearForm"),
+  refreshInbox: qs("#refreshInbox"),
+  exportJson: qs("#exportJson"),
+  inboxList: qs("#inboxList"),
+  emptyState: qs("#emptyState"),
+  repoBadge: qs("#repoBadge"),
+  connDot: qs("#connDot"),
+  toast: qs("#toast"),
+};
+
+// Utilities
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const encodeBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+const decodeBase64 = (b64) => decodeURIComponent(escape(atob(b64)));
+const nowIso = () => new Date().toISOString();
+const niceDate = (iso) => new Date(iso).toLocaleString();
+
+function showToast(msg, ms = 2200) {
+  ui.toast.textContent = msg;
+  ui.toast.classList.add("show");
+  setTimeout(() => ui.toast.classList.remove("show"), ms);
+}
+
+function saveLocalEmails() {
+  localStorage.setItem("auroraInbox.emailsCache", JSON.stringify({
+    version: 1, updatedAt: nowIso(), emails: state.emails
+  }));
+}
+
+function loadLocalEmails() {
+  try {
+    const raw = localStorage.getItem("auroraInbox.emailsCache");
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data)) {
+      state.emails = data;
+    } else if (data && Array.isArray(data.emails)) {
+      state.emails = data.emails;
+    }
+  } catch {}
+}
+
+async function githubGetFile() {
+  const { owner, repo, path, branch, token } = CONFIG;
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
+  const res = await fetch(url, {
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": `Bearer ${token}`,
+      "X-GitHub-Api-Version": "2022-11-28"
+    }
+  });
+  if (res.status === 404) return { exists: false };
+  if (!res.ok) throw new Error(`GitHub GET failed: ${res.status}`);
+  const json = await res.json();
+  return {
+    exists: true,
+    sha: json.sha,
+    content: decodeBase64(json.content || "")
+  };
+}
+
+async function githubPutFile(contentText, message, existingSha = null) {
+  const { owner, repo, path, branch, token } = CONFIG;
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  const body = {
+    message,
+    content: encodeBase64(contentText),
+    branch
+  };
+  if (existingSha) body.sha = existingSha;
+
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`GitHub PUT failed: ${res.status} ${errText}`);
+  }
+  const json = await res.json();
+  return { content: json.content, commit: json.commit, sha: json.content?.sha };
+}
+
+async function fetchEmails() {
+  // optimistic render from cache
+  loadLocalEmails();
+  renderInbox();
+
+  // reflect repo badge
+  ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
+  ui.connDot.style.background = "#b86fff"; // idle
+
+  // sanity checks
+  if (!CONFIG.owner || !CONFIG.repo || !CONFIG.branch || !CONFIG.path || !CONFIG.token) {
+    showToast("App not configured. Edit CONFIG in app.js");
+    return;
+  }
+
+  try {
+    const file = await githubGetFile();
+    if (!file.exists) {
+      state.emails = [];
+      state.fileSha = null;
+      saveLocalEmails();
+      renderInbox();
+      ui.connDot.style.background = "#ffcc66"; // exists=false, will create on first send
+      return;
+    }
+    const parsed = JSON.parse(file.content || "{}");
+    const emails = Array.isArray(parsed) ? parsed : (parsed.emails || []);
+    state.emails = emails;
+    state.fileSha = file.sha;
+    saveLocalEmails();
+    renderInbox();
+    ui.connDot.style.background = "#7dffb3"; // synced
+  } catch (e) {
+    console.warn(e);
+    ui.connDot.style.background = "#ff8888"; // error
+    showToast("Failed to fetch from GitHub (using cache)");
+  }
+}
+
+function renderInbox() {
+  const list = ui.inboxList;
+  list.innerHTML = "";
+  const emails = [...state.emails].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+  if (!emails.length) {
+    ui.emptyState.style.display = "block";
+    return;
+  }
+  ui.emptyState.style.display = "none";
+
+  for (const mail of emails) {
+    const item = document.createElement("article");
+    item.className = "mail";
+    item.setAttribute("role", "listitem");
+    item.tabIndex = 0;
+
+    const unread = state.unreadLocal.has(mail.id);
+    if (unread) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = "NEW";
+      item.appendChild(badge);
+    }
+
+    const title = document.createElement("h3");
+    title.textContent = mail.title || "(Untitled)";
+
+    const time = document.createElement("time");
+    time.dateTime = mail.createdAt || "";
+    time.textContent = niceDate(mail.createdAt || nowIso());
+
+    const body = document.createElement("p");
+    body.textContent = mail.body || "";
+
+    item.appendChild(title);
+    item.appendChild(time);
+    item.appendChild(body);
+
+    item.addEventListener("click", () => openMail(mail));
+    item.addEventListener("keypress", (e) => { if (e.key === "Enter") openMail(mail); });
+
+    list.appendChild(item);
+  }
+}
+
+function openMail(mail) {
+  state.unreadLocal.delete(mail.id);
+  const dlg = document.createElement("dialog");
+  dlg.className = "settings";
+  dlg.innerHTML = `
     <form method="dialog" class="settings-content card">
       <header class="settings-header">
-        <h2>Settings</h2>
+        <h2>${escapeHtml(mail.title || "(Untitled)")}</h2>
         <button class="icon-btn" value="close" aria-label="Close">✕</button>
       </header>
       <div class="settings-body">
-        <div class="two-col">
-          <div class="field">
-            <label for="owner">GitHub Owner</label>
-            <input id="owner" placeholder="e.g., the-rebooted-coder" />
-          </div>
-          <div class="field">
-            <label for="repo">Repository</label>
-            <input id="repo" placeholder="e.g., personal-notes" />
-          </div>
-        </div>
-        <div class="two-col">
-          <div class="field">
-            <label for="branch">Branch</label>
-            <input id="branch" placeholder="main" />
-          </div>
-          <div class="field">
-            <label for="path">JSON Path</label>
-            <input id="path" placeholder="emails.json" />
-          </div>
-        </div>
-        <div class="field">
-          <label for="token">Personal Access Token</label>
-          <div class="token-row">
-            <input id="token" type="password" placeholder="ghp_..." autocomplete="off" />
-            <button type="button" id="toggleToken" class="btn small ghost">Show</button>
-          </div>
-          <p class="hint">
-            Use a fine-grained token with Repository permissions → Contents: Read and Write for your selected repo.
-            Your token is stored only in your browser (localStorage).
-          </p>
-        </div>
+        <p class="hint">${niceDate(mail.createdAt || nowIso())}</p>
+        <div style="white-space: pre-wrap; color: var(--muted); margin-top: 10px;">${escapeHtml(mail.body || "")}</div>
       </div>
       <footer class="settings-footer">
-        <button id="saveSettings" class="btn primary" value="save">Save</button>
         <button class="btn ghost" value="close">Close</button>
       </footer>
     </form>
-  </dialog>
+  `;
+  document.body.appendChild(dlg);
+  dlg.addEventListener("close", () => dlg.remove());
+  if (!dlg.showModal) {
+    // Safari <16 fallback
+    dlg.setAttribute("open", "");
+  } else {
+    dlg.showModal();
+  }
+  renderInbox();
+}
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+function escapeHtml(str) {
+  return (str || "").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
 
-  <script type="module" src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(console.warn);
-      });
-    }
-  </script>
-</body>
-</html>
+function clearCompose() {
+  ui.composeForm.reset();
+}
+
+function generateId() {
+  const rnd = Math.random().toString(36).slice(2, 8);
+  return `${Date.now().toString(36)}-${rnd}`;
+}
+
+async function handleSend(e) {
+  e.preventDefault();
+  const form = ui.composeForm;
+  const title = form.title.value.trim();
+  const body = form.body.value.trim();
+
+  if (!title || !body) {
+    showToast("Please fill in title and message");
+    return;
+  }
+  const email = {
+    id: generateId(),
+    title,
+    body,
+    createdAt: nowIso()
+  };
+
+  // Update local first
+  state.emails.push(email);
+  saveLocalEmails();
+  state.unreadLocal.add(email.id);
+  renderInbox();
+
+  // Prepare JSON
+  const payload = {
+    version: 1,
+    updatedAt: nowIso(),
+    emails: state.emails
+  };
+  const contentText = JSON.stringify(payload, null, 2);
+  const commitMsg = `Add note: ${title.slice(0, 64)}`;
+
+  try {
+    // Get latest sha to reduce conflicts
+    try {
+      const file = await githubGetFile();
+      if (file.exists) state.fileSha = file.sha;
+      else state.fileSha = null;
+    } catch {}
+
+    const put = await githubPutFile(contentText, commitMsg, state.fileSha);
+    state.fileSha = put.sha || state.fileSha;
+    showToast("Sent and saved to GitHub ✓");
+    clearCompose();
+    ui.connDot.style.background = "#7dffb3";
+  } catch (err) {
+    console.warn(err);
+    showToast("Saved locally. GitHub sync failed.");
+    ui.connDot.style.background = "#ff8888";
+  }
+}
+
+function exportJson() {
+  const payload = {
+    version: 1,
+    updatedAt: nowIso(),
+    emails: state.emails
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "emails.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function bindUI() {
+  // Tabs
+  ui.tabs.compose.addEventListener("click", () => switchTab("compose"));
+  ui.tabs.inbox.addEventListener("click", () => switchTab("inbox"));
+
+  // Compose
+  ui.composeForm.addEventListener("submit", handleSend);
+  ui.clearForm.addEventListener("click", clearCompose);
+
+  // Inbox
+  ui.refreshInbox.addEventListener("click", fetchEmails);
+  ui.exportJson.addEventListener("click", exportJson);
+}
+
+function switchTab(which) {
+  const entries = [
+    ["compose", ui.tabs.compose, ui.panels.compose],
+    ["inbox", ui.tabs.inbox, ui.panels.inbox]
+  ];
+  for (const [name, tab, panel] of entries) {
+    const active = name === which;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    panel.classList.toggle("active", active);
+  }
+}
+
+async function init() {
+  // show target repo
+  ui.repoBadge.textContent = `${CONFIG.owner}/${CONFIG.repo} • ${CONFIG.branch}`;
+  bindUI();
+  await fetchEmails();
+}
+
+init();

@@ -10,11 +10,11 @@ const state = {
   emails: [],
   fileSha: null, // last known sha of JSON in repo
   config: {
-    owner: "",
-    repo: "",
+    owner: "sakshij0812",
+    repo: "Note-to-Self-Data",
     branch: "main",
     path: "emails.json",
-    token: ""
+    token: "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"
   },
   unreadLocal: new Set() // track unread locally (ids)
 };

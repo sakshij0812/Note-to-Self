@@ -1,4 +1,4 @@
-// Simple app-shell service worker.
+// Simple app-shell service worker for offline support.
 // Caches static assets; skips caching authenticated API calls.
 
 const CACHE = "aurora-inbox-v1";
@@ -28,7 +28,7 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  // Don't cache GitHub API or any request with Authorization header
+  // Don't cache GitHub API or any request with an Authorization header
   if (url.hostname === "api.github.com") return;
   if (e.request.headers.get("Authorization")) return;
 
