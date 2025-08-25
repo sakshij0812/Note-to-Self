@@ -6,7 +6,7 @@ const OWNER = 'sakshij0812';
 const REPO = 'Note-to-Self-Data';
 const BRANCH = 'main';
 const FILE_PATH = 'data/emails.json';
-const IMAGES_DIR = 'data/images'; // new: where photos will be saved
+const IMAGES_DIR = 'data/images'; // where photos will be saved
 
 const GH_API = 'https://api.github.com';
 const API_HEADERS = (token) => ({
@@ -20,7 +20,7 @@ let displayName = null; // lives in memory
 let emails = []; // local cache
 let currentSha = null; // sha of the JSON file (if exists)
 let openedId = null; // track by id instead of index for safety
-let selectedImages = []; // new: images chosen for the next entry
+let selectedImages = []; // images chosen for the next entry
 
 // Helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -110,7 +110,6 @@ async function getEmailsFile() {
     throw new Error(`Could not reach your constellation: ${res.status} ${t}`);
   }
 
-  // Try metadata + base64 first (gives us sha)
   const json = await res.json();
   currentSha = json.sha || null;
   let content = decode64(json.content || '');
@@ -129,12 +128,9 @@ async function getEmailsFile() {
     }
   }
 
-  if (Array.isArray(parsed)) {
-    return { exists: true, emails: parsed };
-  }
+  if (Array.isArray(parsed)) return { exists: true, emails: parsed };
   if (parsed && typeof parsed === 'object') {
     if (Array.isArray(parsed.emails)) return { exists: true, emails: parsed.emails };
-    // Support object maps {id: email, ...}
     return { exists: true, emails: Object.values(parsed) };
   }
   return { exists: true, emails: [] };
@@ -248,6 +244,69 @@ async function blobToBase64(blob) {
   return arrayBufferToBase64(buf);
 }
 
+/* ---------- Image display/fetch (handles private repos and raw CDN delay) ---------- */
+
+// Memory cache of object URLs so we don't refetch the same path
+const imageObjectUrlCache = new Map();
+
+// Try to extract repo path from a raw.githubusercontent URL
+function pathFromRawUrl(u) {
+  try {
+    const m = u.match(/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(.+)$/);
+    if (m && m[1]) return decodeURIComponent(m[1]);
+  } catch {}
+  return null;
+}
+
+// Fetch image bytes via Contents API (auth) and return an object URL
+async function getObjectUrlForPath(path) {
+  if (imageObjectUrlCache.has(path)) return imageObjectUrlCache.get(path);
+
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(BRANCH)}`;
+  const res = await fetch(url, {
+    headers: { ...API_HEADERS(magicToken), Accept: 'application/vnd.github.v3.raw' }
+  });
+  if (!res.ok) throw new Error(`Image fetch failed: ${res.status}`);
+  const blob = await res.blob();
+  const objUrl = URL.createObjectURL(blob);
+  imageObjectUrlCache.set(path, objUrl);
+  return objUrl;
+}
+
+// Robust loader: accepts either a repo-relative path ("data/images/...") or a raw URL
+function loadImageIntoElement(imgEl, stored) {
+  // Clean previous handlers
+  imgEl.onerror = null;
+
+  // If a full URL was stored (older entries), try it first then fall back
+  if (typeof stored === 'string' && /^https?:\/\//.test(stored)) {
+    imgEl.src = stored;
+    imgEl.onerror = async () => {
+      const path = pathFromRawUrl(stored);
+      if (!path) return;
+      try {
+        const obj = await getObjectUrlForPath(path);
+        imgEl.src = obj;
+      } catch {}
+    };
+    return;
+  }
+
+  // Otherwise assume we stored a repo path; try raw first (works for public repos),
+  // then fall back to authenticated API fetch for private repos or CDN lag
+  const path = String(stored || '').replace(/^\/+/, '');
+  if (!path) return;
+
+  // Try raw (fast path if repo is public and CDN has the file)
+  imgEl.src = rawUrl(path);
+  imgEl.onerror = async () => {
+    try {
+      const obj = await getObjectUrlForPath(path);
+      imgEl.src = obj;
+    } catch {}
+  };
+}
+
 /* ---------- UI wiring ---------- */
 function setupTabs() {
   const tabs = $$('.tab');
@@ -292,7 +351,7 @@ function renderInbox() {
     const card = $('.note-card', node);
     const thumb = $('.note-thumb', node);
     if (Array.isArray(e.images) && e.images.length) {
-      thumb.src = e.images[0];
+      loadImageIntoElement(thumb, e.images[0]);
       thumb.hidden = false;
     }
     $('.note-title', node).textContent = e.title || '(Untitled)';
@@ -330,10 +389,10 @@ function openReader(email) {
   const gallery = $('#readerGallery');
   gallery.innerHTML = '';
   if (Array.isArray(email.images) && email.images.length) {
-    email.images.forEach(u => {
+    email.images.forEach(stored => {
       const img = new Image();
-      img.src = u;
       img.alt = '';
+      loadImageIntoElement(img, stored);
       gallery.appendChild(img);
     });
   }
@@ -441,7 +500,8 @@ async function onSend() {
         const namePart = `${Date.now()}-${idx}.jpg`;
         const path = `${IMAGES_DIR}/${newEmail.id}/${namePart}`;
         await putFile(path, b64, `feat: add photo for entry ${newEmail.id} 📷`);
-        uploaded.push(rawUrl(path));
+        // Store the repo-relative path; we’ll resolve to a displayable URL at render time.
+        uploaded.push(path);
       }
       newEmail.images = uploaded;
       sparkleStatus(status, `Photos uploaded. Finalizing letter…`);
