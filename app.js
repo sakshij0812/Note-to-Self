@@ -346,6 +346,58 @@ function setupSettings() {
   });
 }
 
+// Update flow (show a magical popup when a new version is available)
+function setupUpdateFlow() {
+  if (!('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    // If there's an update already waiting when the page loads
+    if (reg.waiting) {
+      showUpdateModal(reg);
+    }
+
+    // Listen for new updates
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // New update installed, waiting to activate
+          showUpdateModal(reg);
+        }
+      });
+    });
+
+    // After we tell the waiting SW to activate, reload once controlled by it
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  }).catch(() => {});
+}
+
+function showUpdateModal(reg) {
+  const dlg = $('#updateModal');
+  if (!dlg) return;
+
+  const close = () => (typeof dlg.close === 'function' ? dlg.close() : dlg.removeAttribute('open'));
+  const updateNow = () => {
+    if (reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    close();
+  };
+
+  $('#updateNowBtn').onclick = updateNow;
+  $('#updateLaterBtn').onclick = close;
+  $('#closeUpdate').onclick = close;
+
+  if (typeof dlg.showModal === 'function') dlg.showModal();
+  else dlg.setAttribute('open', '');
+}
+
 // Init
 window.addEventListener('DOMContentLoaded', () => {
   // Token
@@ -388,8 +440,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // Preload inbox if token present
   if (magicToken) refreshInbox();
 
-  // Register service worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  }
+  // Register service worker with "update available" flow
+  setupUpdateFlow();
 });

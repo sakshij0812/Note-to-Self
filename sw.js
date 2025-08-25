@@ -1,4 +1,5 @@
-const CACHE = 'aurora-mailbox-v2';
+// Simple offline support for Aurora Mailbox ✨
+const CACHE = 'aurora-mailbox-v1';
 const ASSETS = [
   './',
   './index.html',
@@ -11,7 +12,8 @@ const ASSETS = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
+    // Do NOT call skipWaiting here; we want to wait until the user clicks "Update now"
   );
 });
 
@@ -20,6 +22,13 @@ self.addEventListener('activate', (e) => {
     caches.keys().then(keys => Promise.all(keys.map(k => (k !== CACHE && caches.delete(k)))))
   );
   self.clients.claim();
+});
+
+// Listen for a message from the page to activate immediately
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (e) => {
