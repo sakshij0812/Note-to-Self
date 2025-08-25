@@ -116,3 +116,17 @@
 #creditLink .flip-inner{
   background: transparent !important;
 }
+[hidden]{
+  display: none !important;
+}
+
+/* Do not render card thumbnails if they are hidden or lack a usable src */
+.note-card .note-thumb[hidden],
+.note-card .note-thumb:not([src]),
+.note-card .note-thumb[src=""]{
+  display: none !important;
+}
+
+#readerGallery:empty{
+  display: none !important;
+}
