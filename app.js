@@ -6,6 +6,7 @@ const OWNER = 'sakshij0812';
 const REPO = 'Note-to-Self-Data';
 const BRANCH = 'main';
 const FILE_PATH = 'data/emails.json';
+const IMAGES_DIR = 'data/images'; // new: where photos will be saved
 
 const GH_API = 'https://api.github.com';
 const API_HEADERS = (token) => ({
@@ -19,6 +20,7 @@ let displayName = null; // lives in memory
 let emails = []; // local cache
 let currentSha = null; // sha of the JSON file (if exists)
 let openedId = null; // track by id instead of index for safety
+let selectedImages = []; // new: images chosen for the next entry
 
 // Helpers
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -33,6 +35,7 @@ const decode64 = (b64) => {
   }
 };
 const datePretty = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+const rawUrl = (path) => `https://raw.githubusercontent.com/${OWNER}/${REPO}/${encodeURIComponent(BRANCH)}/${path.split('/').map(encodeURIComponent).join('/')}`;
 
 // Token + name storage
 function loadToken() {
@@ -137,7 +140,31 @@ async function getEmailsFile() {
   return { exists: true, emails: [] };
 }
 
-// GitHub Contents API: put file
+// GitHub Contents API: put file (JSON or binary)
+// contentB64 must be base64 without data: prefix
+async function putFile(path, contentB64, message = 'chore: add file 📄') {
+  const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
+  const body = {
+    message,
+    content: contentB64,
+    branch: BRANCH,
+  };
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      ...API_HEADERS(magicToken),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Upload failed: ${res.status} ${t}`);
+  }
+  return res.json();
+}
+
+// GitHub Contents API: put JSON file (emails)
 async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 💌') {
   const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURI(FILE_PATH)}`;
   const body = {
@@ -165,7 +192,63 @@ async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 
   return json;
 }
 
-// UI wiring
+/* ---------- Image helpers ---------- */
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function fileToImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    const fr = new FileReader();
+    fr.onload = () => { img.src = fr.result; };
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+
+// Compress using canvas to a max dimension while preserving aspect ratio
+async function compressImage(file, maxDim = 1600, quality = 0.85, type = 'image/jpeg') {
+  try {
+    const img = await fileToImage(file);
+    const { width, height } = img;
+    let targetW = width;
+    let targetH = height;
+    if (width > height && width > maxDim) {
+      targetW = maxDim;
+      targetH = Math.round((maxDim / width) * height);
+    } else if (height >= width && height > maxDim) {
+      targetH = maxDim;
+      targetW = Math.round((maxDim / height) * width);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, targetW, targetH);
+
+    const blob = await new Promise((res) => canvas.toBlob(res, type, quality));
+    return blob || file;
+  } catch {
+    return file;
+  }
+}
+
+async function blobToBase64(blob) {
+  const buf = await blob.arrayBuffer();
+  return arrayBufferToBase64(buf);
+}
+
+/* ---------- UI wiring ---------- */
 function setupTabs() {
   const tabs = $$('.tab');
   tabs.forEach(btn => {
@@ -176,7 +259,7 @@ function setupTabs() {
       $$('.panel').forEach(p => p.classList.remove('active'));
       if (tab === 'compose') {
         $('#composePanel').classList.add('active');
-        updateGreeting(); // random greeting on every visit
+        updateGreeting();
       } else {
         $('#inboxPanel').classList.add('active');
         refreshInbox();
@@ -207,6 +290,11 @@ function renderInbox() {
   list.forEach((e, idx) => {
     const node = tpl.content.cloneNode(true);
     const card = $('.note-card', node);
+    const thumb = $('.note-thumb', node);
+    if (Array.isArray(e.images) && e.images.length) {
+      thumb.src = e.images[0];
+      thumb.hidden = false;
+    }
     $('.note-title', node).textContent = e.title || '(Untitled)';
     $('.note-preview', node).textContent = (e.body || '').slice(0, 200);
     $('.date', node).textContent = datePretty(e.createdAt || new Date().toISOString());
@@ -237,6 +325,19 @@ function openReader(email) {
   openedId = email.id || null;
   $('#readerTitle').textContent = email.title || '(Untitled)';
   $('#readerBody').textContent = email.body || '';
+
+  // render gallery
+  const gallery = $('#readerGallery');
+  gallery.innerHTML = '';
+  if (Array.isArray(email.images) && email.images.length) {
+    email.images.forEach(u => {
+      const img = new Image();
+      img.src = u;
+      img.alt = '';
+      gallery.appendChild(img);
+    });
+  }
+
   const dlg = $('#readerModal');
   if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
 }
@@ -253,7 +354,7 @@ function shareCurrent() {
   if (!e) return;
   const text = `💌 ${e.title}\n\n${e.body}`;
   if (navigator.share) {
-    navigator.share({ title: e.title || 'Aurora Mail', text });
+    navigator.share({ title: e.title || 'Reflections', text });
   } else {
     navigator.clipboard.writeText(text);
     alert('Copied to clipboard ✨');
@@ -301,13 +402,13 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Compose actions
+/* ---------- Compose actions ---------- */
 async function onSend() {
   const title = $('#mailTitle').value.trim();
   const body = $('#mailBody').value.trim();
   const status = $('#composeStatus');
-  if (!title && !body) {
-    sparkleStatus(status, 'Write a little something lovely first ✨', 'error');
+  if (!title && !body && selectedImages.length === 0) {
+    sparkleStatus(status, 'Write a little something lovely or add a photo first ✨', 'error');
     return;
   }
   if (!magicToken) {
@@ -316,14 +417,40 @@ async function onSend() {
     return;
   }
   $('#sendBtn').disabled = true;
-  sparkleStatus(status, 'Sending with stardust…');
+  sparkleStatus(status, 'Preparing your letter…');
 
   const newEmail = {
     id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
     title,
     body,
     createdAt: new Date().toISOString(),
+    images: [],
   };
+
+  // Upload photos (if any)
+  if (selectedImages.length) {
+    try {
+      sparkleStatus(status, `Uploading ${selectedImages.length} photo(s)…`);
+      const uploaded = [];
+      let idx = 0;
+      for (const file of selectedImages) {
+        idx += 1;
+        sparkleStatus(status, `Compressing photo ${idx}/${selectedImages.length}…`);
+        const blob = await compressImage(file, 1600, 0.85, 'image/jpeg');
+        const b64 = await blobToBase64(blob);
+        const namePart = `${Date.now()}-${idx}.jpg`;
+        const path = `${IMAGES_DIR}/${newEmail.id}/${namePart}`;
+        await putFile(path, b64, `feat: add photo for entry ${newEmail.id} 📷`);
+        uploaded.push(rawUrl(path));
+      }
+      newEmail.images = uploaded;
+      sparkleStatus(status, `Photos uploaded. Finalizing letter…`);
+    } catch (err) {
+      sparkleStatus(status, `Photo upload failed: ${err.message}`, 'error');
+      $('#sendBtn').disabled = false;
+      return;
+    }
+  }
 
   try {
     const res = await getEmailsFile();
@@ -333,8 +460,11 @@ async function onSend() {
     renderInbox();
     sparkleStatus(status, 'Your letter is shining in the night sky ✨');
     sparkleTrail();
+    // reset form
     $('#mailTitle').value = '';
     $('#mailBody').value = '';
+    clearSelectedImages();
+
     // switch to inbox
     $$('[data-tab]').forEach(b => b.classList.remove('active'));
     $$('[data-tab="inbox"]')[0].classList.add('active');
@@ -357,6 +487,38 @@ function onClear() {
   $('#mailTitle').value = '';
   $('#mailBody').value = '';
   $('#composeStatus').textContent = '';
+  clearSelectedImages();
+}
+
+/* ---------- Images: picker, preview, removal ---------- */
+function updateImagePreviews() {
+  const wrap = $('#imagePreview');
+  wrap.innerHTML = '';
+  selectedImages.forEach((file, i) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = URL.createObjectURL(file);
+    img.onload = () => URL.revokeObjectURL(img.src);
+    const btn = document.createElement('button');
+    btn.className = 'remove';
+    btn.type = 'button';
+    btn.textContent = '×';
+    btn.title = 'Remove';
+    btn.addEventListener('click', () => {
+      selectedImages.splice(i, 1);
+      updateImagePreviews();
+    });
+    div.appendChild(img);
+    div.appendChild(btn);
+    wrap.appendChild(div);
+  });
+}
+
+function clearSelectedImages() {
+  selectedImages = [];
+  updateImagePreviews();
 }
 
 // Token modal
@@ -460,6 +622,18 @@ window.addEventListener('DOMContentLoaded', () => {
   if (!rememberedToken || !rememberedName) {
     openTokenModal(false);
   }
+
+  // Image picker events
+  $('#addPhotosBtn')?.addEventListener('click', () => $('#imageInput').click());
+  $('#clearPhotosBtn')?.addEventListener('click', clearSelectedImages);
+  $('#imageInput')?.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files || []);
+    const onlyImages = files.filter(f => f.type.startsWith('image/'));
+    selectedImages.push(...onlyImages);
+    updateImagePreviews();
+    // reset input so selecting same files again triggers change
+    e.target.value = '';
+  });
 
   $('#saveTokenBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
