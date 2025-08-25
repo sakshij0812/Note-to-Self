@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Aurora Inbox</title>
+  <meta name="theme-color" content="#ffbce1" />
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="aurora-bg" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="brand">
+      <span class="logo">✿</span>
+      <div class="titles">
+        <h1>Aurora Inbox</h1>
+        <p class="subtitle">Send little notes to yourself. Soft, simple, yours.</p>
+      </div>
+    </div>
+    <button class="settings-btn" id="openSettings" aria-label="Open settings">⚙︎</button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Primary">
+    <button role="tab" aria-selected="true" aria-controls="composePanel" id="composeTab" class="tab active">Compose</button>
+    <button role="tab" aria-selected="false" aria-controls="inboxPanel" id="inboxTab" class="tab">Inbox</button>
+  </nav>
+
+  <main>
+    <section id="composePanel" role="tabpanel" aria-labelledby="composeTab" class="panel active">
+      <article class="card">
+        <h2>New Note</h2>
+        <form id="composeForm">
+          <div class="field">
+            <label for="title">Title</label>
+            <input id="title" name="title" type="text" required maxlength="120" placeholder="A tiny reminder..." />
+          </div>
+          <div class="field">
+            <label for="body">Message</label>
+            <textarea id="body" name="body" rows="8" required placeholder="Write something lovely to your future self..."></textarea>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn primary">Send to Myself</button>
+            <button type="button" id="clearForm" class="btn ghost">Clear</button>
+          </div>
+          <p class="hint">Notes are saved to your GitHub repo as a JSON file using your personal token. Keep your token private.</p>
+        </form>
+      </article>
+    </section>
+
+    <section id="inboxPanel" role="tabpanel" aria-labelledby="inboxTab" class="panel">
+      <article class="card">
+        <div class="inbox-header">
+          <h2>Inbox</h2>
+          <div class="inbox-actions">
+            <button id="refreshInbox" class="btn small">Refresh</button>
+            <button id="exportJson" class="btn small ghost">Export JSON</button>
+          </div>
+        </div>
+        <div id="emptyState" class="empty">
+          <p>No notes yet. Write your first one on the Compose tab ✨</p>
+        </div>
+        <div id="inboxList" class="inbox-list" role="list"></div>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="settingsDialog" class="settings">
+    <form method="dialog" class="settings-content card">
+      <header class="settings-header">
+        <h2>Settings</h2>
+        <button class="icon-btn" value="close" aria-label="Close">✕</button>
+      </header>
+      <div class="settings-body">
+        <div class="two-col">
+          <div class="field">
+            <label for="owner">GitHub Owner</label>
+            <input id="owner" placeholder="e.g., the-rebooted-coder" />
+          </div>
+          <div class="field">
+            <label for="repo">Repository</label>
+            <input id="repo" placeholder="e.g., personal-notes" />
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label for="branch">Branch</label>
+            <input id="branch" placeholder="main" />
+          </div>
+          <div class="field">
+            <label for="path">JSON Path</label>
+            <input id="path" placeholder="emails.json" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="token">Personal Access Token</label>
+          <div class="token-row">
+            <input id="token" type="password" placeholder="ghp_..." autocomplete="off" />
+            <button type="button" id="toggleToken" class="btn small ghost">Show</button>
+          </div>
+          <p class="hint">
+            Use a fine-grained token with Repository permissions → Contents: Read and Write for your selected repo.
+            Your token is stored only in your browser (localStorage).
+          </p>
+        </div>
+      </div>
+      <footer class="settings-footer">
+        <button id="saveSettings" class="btn primary" value="save">Save</button>
+        <button class="btn ghost" value="close">Close</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(console.warn);
+      });
+    }
+  </script>
+</body>
+</html>

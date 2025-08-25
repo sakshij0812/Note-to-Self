@@ -1,0 +1,22 @@
+{
+  "name": "Note to Self",
+  "short_name": "Note to Self",
+  "description": "A soft, aurora-styled PWA to send notes to yourself and save them to GitHub.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0d0b12",
+  "theme_color": "#ffbce1",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "icons/maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
