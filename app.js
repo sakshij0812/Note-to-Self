@@ -14,7 +14,7 @@ const state = {
     repo: "Note-to-Self-Data",
     branch: "main",
     path: "emails.json",
-    token: "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"
+    token: "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"
   },
   unreadLocal: new Set() // track unread locally (ids)
 };
