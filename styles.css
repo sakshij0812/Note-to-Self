@@ -235,6 +235,17 @@ body{
 .card{ padding:14px; border-radius:18px; }
 h2{ margin:6px 0 12px; font-size:20px; }
 
+/* Diary-inspired handwriting for entries */
+.diary-text,
+.reader-body,
+#mailBody,
+.note-preview{
+  font-family: 'Caveat', 'Patrick Hand', 'Manrope', cursive;
+  font-size: 1.1rem;
+  line-height: 1.65;
+  letter-spacing: 0.2px;
+}
+
 .field{ display:flex; flex-direction:column; gap:8px; margin: 10px 0 14px; }
 .field span{
   color: color-mix(in srgb, var(--muted) 80%, #ffffff 20%);
@@ -306,6 +317,7 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
 @media (min-width:900px){ .masonry{ column-count: 3; } }
 
 .note-card{
+  position: relative;
   display:inline-block; width:100%; margin: 0 0 12px; padding:14px;
   break-inside: avoid; border-radius:16px;
   background-image: radial-gradient(150px 60px at 80% -10%, rgba(255,255,255,0.4), transparent);
@@ -316,6 +328,19 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
     background-image: radial-gradient(150px 60px at 80% -10%, rgba(255,255,255,0.2), transparent);
   }
 }
+
+/* Thumbnail inside card */
+.note-thumb{
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--stroke);
+  image-orientation: from-image;
+  display: block;
+}
+
 .note-title{ margin:0 0 8px; font-size:16px; color: var(--txt); }
 .note-preview{ margin:0 0 12px; color: var(--txt); opacity:0.9; white-space: pre-wrap; }
 .note-meta{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -329,11 +354,44 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
   display:flex; align-items:center; justify-content:space-between; padding:14px 14px 0;
 }
 .modal .reader-body{
-  padding: 4px 14px 14px; white-space: pre-wrap; line-height: 1.55;
+  padding: 4px 14px 8px; white-space: pre-wrap; line-height: 1.65;
   color: var(--txt);
 }
+
+/* Gallery inside reader */
+.gallery{
+  padding: 0 14px 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+@media (min-width:700px){
+  .gallery{ grid-template-columns: repeat(3, 1fr); }
+}
+.gallery img{
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  image-orientation: from-image;
+}
+
 .modal .modal-footer{
   display:flex; gap:10px; justify-content:flex-end; padding: 0 14px 14px;
+}
+
+/* Uploader previews */
+.image-controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.image-previews{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.image-previews .thumb{
+  position:relative; width:88px; height:88px; border-radius:12px; overflow:hidden;
+  border: 1px solid var(--stroke); background: #0001;
+}
+.image-previews .thumb img{ width:100%; height:100%; object-fit:cover; display:block; image-orientation: from-image; }
+.image-previews .thumb button.remove{
+  position:absolute; top:4px; right:4px; width:22px; height:22px;
+  border:none; border-radius:999px; background: rgba(0,0,0,0.55); color:#fff; cursor:pointer;
 }
 
 .token-form{ padding: 14px; }
