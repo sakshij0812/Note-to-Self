@@ -1,0 +1,27 @@
+/* Safe-area bump to keep UI clear of iPhone status bar / Dynamic Island */
+/* Place this file after styles.css so these rules win. */
+
+:root{
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Push the whole app content down just a bit past the status bar */
+.container{
+  /* old was: padding: 16px 12px 90px; */
+  padding-top: max(16px, calc(var(--safe-top) + 14px));
+  padding-right: 12px;
+  padding-left: 12px;
+  padding-bottom: max(90px, calc(90px + var(--safe-bottom)));
+}
+
+/* Tabs sit right under the safe area */
+.tabs{ margin-top: 4px; }
+
+/* Make sure fixed footer also respects the home indicator area */
+.app-footer{
+  padding-bottom: calc(10px + var(--safe-bottom));
+}
+
+/* Optional: dialogs align nicely without colliding with top inset */
+.modal{ margin-top: max(10px, calc(var(--safe-top) + 6px)); }

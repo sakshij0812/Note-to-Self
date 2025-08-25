@@ -3,20 +3,15 @@
 <head>
   <meta charset="utf-8" />
 
-  <!-- Let iOS/Safari know we support both color schemes -->
   <meta name="color-scheme" content="light dark" />
-
-  <!-- Dynamic theme colors for browser UI (iOS 15+/Safari, Android Chrome) -->
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f6ff" />
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0a14" />
-
-  <!-- iOS standalone status bar style (use default for better light mode) -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Aurora Mailbox" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Reflection ✨</title>
+  <title>Reflections ✨</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
@@ -29,12 +24,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Comfortaa:wght@500;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css" />
+  <!-- Add this line so the safe-area fix overrides existing rules -->
+  <link rel="stylesheet" href="overrides.css" />
 </head>
 <body>
-  <!-- 1s loading — pure star-dust burst (stays elegant in both themes) -->
+  <!-- 1s loading — pure star-dust burst -->
   <div id="loadingScreen" class="loading-screen" aria-hidden="true">
     <div class="stardust-burst" role="img" aria-label="Loading">
-      <!-- Tiny white dots flying outwards -->
       <span class="dust" style="--tx:-50px;--ty:-10px;--d:0ms;"></span>
       <span class="dust" style="--tx:-36px;--ty:-34px;--d:20ms;"></span>
       <span class="dust" style="--tx: 28px;--ty:-26px;--d:40ms;"></span>
@@ -51,7 +47,6 @@
       <span class="dust" style="--tx:-48px;--ty: -2px;--d:260ms;"></span>
       <span class="dust" style="--tx:  0px;--ty: 48px;--d:280ms;"></span>
       <span class="dust" style="--tx:  0px;--ty:-48px;--d:300ms;"></span>
-      <!-- a few more for density -->
       <span class="dust sm" style="--tx:-20px;--ty:-12px;--d:60ms;"></span>
       <span class="dust sm" style="--tx: 24px;--ty: 16px;--d:110ms;"></span>
       <span class="dust sm" style="--tx:-16px;--ty: 24px;--d:150ms;"></span>
@@ -61,7 +56,7 @@
     </div>
   </div>
 
-  <!-- Aurora background magic -->
+  <!-- Aurora background -->
   <div class="aurora">
     <span class="blob b1"></span>
     <span class="blob b2"></span>
@@ -69,20 +64,12 @@
     <span class="stars"></span>
   </div>
 
-  <!-- No header (clean top) -->
-
   <main class="container">
-    <!-- Tabs -->
     <nav class="tabs glass">
-      <button class="tab active" data-tab="compose" aria-controls="composePanel">
-        💌 Send Magic
-      </button>
-      <button class="tab" data-tab="inbox" aria-controls="inboxPanel">
-        📚 My Letters
-      </button>
+      <button class="tab active" data-tab="compose" aria-controls="composePanel">💌 Send Magic</button>
+      <button class="tab" data-tab="inbox" aria-controls="inboxPanel">📚 My Letters</button>
     </nav>
 
-    <!-- Compose Panel -->
     <section id="composePanel" class="panel active">
       <div class="card glass">
         <h2>Write yourself a love note ✨</h2>
@@ -99,17 +86,13 @@
           <button id="clearBtn" class="btn ghost">Clear</button>
         </div>
         <p id="composeHint" class="hint">Your note travels to your secret constellation (a JSON file in your GitHub repo) when you press send.</p>
-
-        <!-- Settings icon below the hint (left-aligned) -->
         <div class="under-hint">
           <button id="settingsBtn" class="icon-chip" aria-label="Open settings">⚙️ Settings</button>
         </div>
-
         <p id="composeStatus" class="status"></p>
       </div>
     </section>
 
-    <!-- Inbox Panel -->
     <section id="inboxPanel" class="panel">
       <div class="inbox-controls">
         <button id="refreshBtn" class="btn small">Refresh ✨</button>
@@ -129,7 +112,6 @@
     </section>
   </main>
 
-  <!-- Reader Modal -->
   <dialog id="readerModal" class="modal glass">
     <div class="modal-header">
       <h3 id="readerTitle">Title</h3>
@@ -142,7 +124,6 @@
     </div>
   </dialog>
 
-  <!-- Token Modal -->
   <dialog id="tokenModal" class="modal glass">
     <form method="dialog" id="tokenForm" class="token-form">
       <h3>Welcome to your Aurora Mailbox 🌙</h3>
@@ -158,9 +139,9 @@
       <details class="gentle">
         <summary>How to conjure a Magic Key</summary>
         <ol class="steps">
-          <li>Go to GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens.</li>
-          <li>Select your repo, and grant Repository permissions → Contents: Read and write.</li>
-          <li>Copy the token (starts with ghp_ or github_pat_...). Keep it secret, keep it safe.</li>
+          <li>GitHub → Settings → Developer settings → Personal access tokens → Fine‑grained tokens.</li>
+          <li>Select your repo; grant Repository → Contents: Read and write.</li>
+          <li>Copy the token (ghp_ / github_pat_…). Keep it secret.</li>
         </ol>
       </details>
       <div class="actions">
@@ -170,7 +151,6 @@
     </form>
   </dialog>
 
-  <!-- Settings Modal (Simplified: Magic Key only) -->
   <dialog id="settingsModal" class="modal glass">
     <div class="modal-header">
       <h3>Magic Key ✨</h3>
@@ -187,7 +167,6 @@
     </div>
   </dialog>
 
-  <!-- Update Available Modal -->
   <dialog id="updateModal" class="modal glass">
     <div class="modal-header">
       <h3>Fresh Starlight Awaits ✨</h3>
@@ -213,7 +192,6 @@
 
   <script src="app.js" type="module"></script>
   <script>
-    // Hide the star-dust loader after ~1s
     window.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => document.getElementById('loadingScreen')?.classList.add('hide'), 1000);
     });
