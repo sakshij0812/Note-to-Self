@@ -15,6 +15,7 @@ const API_HEADERS = (token) => ({
 });
 
 let magicToken = null; // lives in memory
+let displayName = null; // lives in memory
 let emails = []; // local cache
 let currentSha = null; // sha of the JSON file (if exists)
 let openedId = null; // track by id instead of index for safety
@@ -33,7 +34,7 @@ const decode64 = (b64) => {
 };
 const datePretty = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
-// Token storage
+// Token + name storage
 function loadToken() {
   const remembered = localStorage.getItem('magicToken');
   if (remembered) return remembered;
@@ -46,6 +47,51 @@ function saveToken(token) {
 function forgetToken() {
   magicToken = null;
   localStorage.removeItem('magicToken');
+}
+function loadName() {
+  const n = localStorage.getItem('displayName');
+  if (n) return n;
+  return null;
+}
+function saveName(name) {
+  displayName = name;
+  try { localStorage.setItem('displayName', name); } catch {}
+}
+function forgetName() {
+  displayName = null;
+  localStorage.removeItem('displayName');
+}
+
+// Friendly greetings
+function getRandomGreeting(name) {
+  const n = (name && name.trim()) ? name.trim() : 'Friend';
+  const list = [
+    `Hi, ${n}! Ready to write a love note?`,
+    `Hey ${n}, shall we bottle a thought?`,
+    `Welcome back, ${n} — let’s sprinkle stardust on your words.`,
+    `${n}, your sky is listening.`,
+    `Hello ${n}! A tiny sparkle of honesty today?`,
+    `Dear ${n}, write gently. You matter.`,
+    `✨ ${n}, what’s shimmering in your heart?`,
+    `Hey ${n} — one breath, one line.`,
+    `${n}, your story glows brighter than auroras.`,
+    `Warm hello, ${n}. Let’s keep it soft.`,
+    `${n}, a little love note to self?`,
+    `Shine on, ${n}. Put it in words.`,
+    `Psst, ${n} — your inner voice wants the mic.`,
+    `Welcome, ${n}. What would kindness say?`,
+    `${n}, leave a trail of gentle truth.`,
+    `Time to exhale onto the page, ${n}.`,
+    `Sweet ${n}, write what you needed to hear.`,
+    `${n}, every word is a firefly.`,
+    `Hello again, ${n}. Your feelings are valid.`,
+    `${n}, small steps, soft light, true words.`
+  ];
+  return list[Math.floor(Math.random() * list.length)];
+}
+function updateGreeting() {
+  const el = $('#greetingTitle');
+  if (el) el.textContent = getRandomGreeting(displayName);
 }
 
 // GitHub Contents API: get file
@@ -130,6 +176,7 @@ function setupTabs() {
       $$('.panel').forEach(p => p.classList.remove('active'));
       if (tab === 'compose') {
         $('#composePanel').classList.add('active');
+        updateGreeting(); // random greeting on every visit
       } else {
         $('#inboxPanel').classList.add('active');
         refreshInbox();
@@ -315,7 +362,10 @@ function onClear() {
 // Token modal
 function openTokenModal(force = false) {
   const dlg = $('#tokenModal');
-  if (force || !magicToken) {
+  if (force || !magicToken || !displayName) {
+    // prefill name if we have it; never prefill token for safety
+    const nameEl = $('#nameInput');
+    if (nameEl && displayName) nameEl.value = displayName;
     if (typeof dlg.showModal === 'function') dlg.showModal();
     else dlg.setAttribute('open', '');
   }
@@ -395,22 +445,37 @@ window.addEventListener('DOMContentLoaded', () => {
   const loader = $('#loadingScreen');
   setTimeout(() => loader?.classList.add('hide'), 1000);
 
-  // Token
-  const remembered = loadToken();
-  if (remembered) magicToken = remembered;
-  else openTokenModal(false);
+  // Token + Name
+  const rememberedToken = loadToken();
+  const rememberedName = loadName();
+  if (rememberedToken) magicToken = rememberedToken;
+  if (rememberedName) displayName = rememberedName;
 
   // Events
   setupTabs();
   setupSettings();
 
+  updateGreeting();
+
+  if (!rememberedToken || !rememberedName) {
+    openTokenModal(false);
+  }
+
   $('#saveTokenBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
-    const t = $('#tokenInput').value.trim();
-    if (!t) return;
-    saveToken(t); // Always persist to localStorage
+    const nameVal = $('#nameInput').value.trim();
+    const tokenVal = $('#tokenInput').value.trim();
+
+    if (nameVal) saveName(nameVal);
+    if (!magicToken && !tokenVal) {
+      alert('Please enter your Magic Key to begin ✨');
+      return;
+    }
+    if (tokenVal) saveToken(tokenVal);
+
+    updateGreeting();
     closeTokenModal();
-    refreshInbox();
+    if (magicToken) refreshInbox();
   });
 
   $('#sendBtn').addEventListener('click', onSend);

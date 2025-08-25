@@ -72,7 +72,7 @@
 
     <section id="composePanel" class="panel active">
       <div class="card glass">
-        <h2>Write yourself a love note ✨</h2>
+        <h2 id="greetingTitle">Welcome ✨</h2>
         <label class="field">
           <span>Title</span>
           <input id="mailTitle" type="text" placeholder="A tiny sparkle of thought..." maxlength="120" />
@@ -127,10 +127,14 @@
   <dialog id="tokenModal" class="modal glass">
     <form method="dialog" id="tokenForm" class="token-form">
       <h3>Welcome to your Aurora Mailbox 🌙</h3>
-      <p class="soft">To let your letters float among the stars, whisper your Magic Key (GitHub token) below.</p>
+      <p class="soft">To let your letters float among the stars, whisper your name and Magic Key (GitHub token) below.</p>
+      <label class="field">
+        <span>Your Name</span>
+        <input id="nameInput" type="text" placeholder="e.g., Alex" autocomplete="off" />
+      </label>
       <label class="field">
         <span>Magic Key</span>
-        <input id="tokenInput" type="password" placeholder="ghp_...sparkly_secret..." autocomplete="off" required />
+        <input id="tokenInput" type="password" placeholder="ghp_...sparkly_secret..." autocomplete="off" />
       </label>
       <details class="gentle">
         <summary>How to conjure a Magic Key</summary>
@@ -143,7 +147,7 @@
       <div class="actions">
         <button class="btn primary" id="saveTokenBtn">Begin the magic ✨</button>
       </div>
-      <p class="hint">Your Magic Key is saved only on this device. You can remove it anytime in Settings.</p>
+      <p class="hint">Your name and Magic Key are saved only on this device. You can remove them anytime in Settings.</p>
     </form>
   </dialog>
 
@@ -156,7 +160,7 @@
       <p class="soft">Manage your secret Magic Key (GitHub token) here.</p>
       <div class="sep"></div>
       <div class="grid2">
-        <button id="reenterTokenBtn" class="btn">Re-enter Magic Key</button>
+        <button id="reenterTokenBtn" class="btn">Re-enter Magic Key / Name</button>
         <button id="forgetTokenBtn" class="btn danger">Forget Magic Key</button>
       </div>
       <p class="hint">Your secret lives only on this device. Re-enter or forget it anytime.</p>
@@ -181,7 +185,7 @@
     <p id="creditLink" class="flip" role="button" tabindex="0" aria-label="Credits" aria-pressed="false">
       <span class="flip-inner">
         <span class="front">&lt;/&gt; with 🪄 by Spandan.</span>
-        <span class="back">An S² Labs Product 🥼</span>
+        <span class="back">An S² Labs Product</span>
       </span>
     </p>
   </footer>
