@@ -127,6 +127,25 @@
   display: none !important;
 }
 
+/* Hide the reader gallery entirely when there are no images */
 #readerGallery:empty{
   display: none !important;
+}
+#mailTitle,
+.note-title,
+#readerTitle,
+.diary-text,
+.reader-body,
+#mailBody,
+.note-preview{
+  font-family: 'Patrick Hand', 'Manrope', system-ui, -apple-system, Segoe UI, Roboto, sans-serif !important;
+}
+
+/* Improve readability for long-form text */
+.diary-text,
+.reader-body,
+#mailBody,
+.note-preview{
+  line-height: 1.7 !important;
+  letter-spacing: 0.15px !important;
 }
