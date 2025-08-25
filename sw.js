@@ -1,7 +1,4 @@
-// Simple app-shell service worker for offline support.
-// Caches static assets; skips caching authenticated API calls.
-
-const CACHE = "aurora-inbox-v1";
+const CACHE = "aurora-inbox-v2";
 const APP_SHELL = [
   "./",
   "./index.html",

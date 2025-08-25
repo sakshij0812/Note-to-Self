@@ -49,10 +49,13 @@
             <label for="body">Message</label>
             <textarea id="body" name="body" rows="8" required placeholder="Write something lovely to your future self..."></textarea>
           </div>
-          <div class="actions">
+
+          <!-- Desktop/tablet actions inside the form -->
+          <div class="actions desktop-only">
             <button type="submit" class="btn primary">Send to Myself</button>
             <button type="button" id="clearForm" class="btn ghost">Clear</button>
           </div>
+
           <p class="hint">Your GitHub token is stored locally in your browser. Keep this site private.</p>
         </form>
       </article>
@@ -62,7 +65,7 @@
       <article class="card">
         <div class="inbox-header">
           <h2>Inbox</h2>
-          <div class="inbox-actions">
+          <div class="inbox-actions desktop-only">
             <button id="refreshInbox" class="btn small">Refresh</button>
             <button id="exportJson" class="btn small ghost">Export JSON</button>
           </div>
@@ -75,24 +78,43 @@
     </section>
   </main>
 
-  <!-- First-run token sheet -->
+  <!-- Mobile sticky action bars -->
+  <div class="mobile-action-bar" id="composeActionBar" data-for="compose">
+    <button id="sendMobile" class="btn primary">Send</button>
+    <button id="clearMobile" class="btn ghost">Clear</button>
+  </div>
+  <div class="mobile-action-bar" id="inboxActionBar" data-for="inbox">
+    <button id="refreshMobile" class="btn primary">Refresh</button>
+    <button id="exportMobile" class="btn ghost">Export</button>
+  </div>
+
+  <!-- Floating key button on mobile -->
+  <button id="keyFab" class="fab-key" aria-label="Set GitHub token">🔑</button>
+
+  <!-- Magical token sheet -->
   <dialog id="tokenDialog" class="sheet" aria-labelledby="tokenTitle">
-    <form method="dialog" class="sheet-content card" id="tokenForm">
+    <form method="dialog" class="sheet-content card sheet-aurora" id="tokenForm">
       <header class="sheet-header">
-        <h2 id="tokenTitle">Enter GitHub Token</h2>
+        <div class="sparkles">✨</div>
+        <h2 id="tokenTitle">Unlock your stardust vault</h2>
+        <p class="sheet-subtitle">Paste your secret key to let Aurora save notes to your GitHub galaxy. It stays on your device.</p>
       </header>
       <div class="sheet-body">
-        <p class="hint">Use a fine‑grained token with Repository → Contents: Read and Write for the configured repo.</p>
         <div class="field">
-          <label for="tokenInput">Personal Access Token</label>
-          <div class="token-row">
-            <input id="tokenInput" type="password" inputmode="text" autocomplete="off" placeholder="ghp_... or github_pat_..." required />
-            <button type="button" id="toggleToken" class="btn small ghost">Show</button>
+          <label for="tokenInput">Secret key</label>
+          <div class="token-row pretty-input">
+            <input id="tokenInput" type="password" inputmode="text" autocomplete="off"
+              placeholder="ghp_… or github_pat_…" required />
+            <div class="token-tools">
+              <button type="button" id="pasteToken" class="chip">Paste</button>
+              <button type="button" id="toggleToken" class="chip">Reveal</button>
+            </div>
           </div>
+          <p class="hint">Tip: create a fine‑grained token with Contents: Read & Write for this repo only.</p>
         </div>
       </div>
-      <footer class="sheet-footer">
-        <button class="btn primary" value="save" id="saveToken">Save token</button>
+      <footer class="sheet-footer sticky">
+        <button class="btn primary" value="save" id="saveToken">Save secret</button>
       </footer>
     </form>
   </dialog>
