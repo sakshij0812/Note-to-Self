@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f6a7d9" />
-  <title>Reflection</title>
+  <title>Aurora Mailbox ✨</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
@@ -23,27 +23,33 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- 1s magical loading: subtle star dust burst from center -->
+  <!-- 1s magical loading: ONLY star-dust burst (no center circle) -->
   <div id="loadingScreen" class="loading-screen" aria-hidden="true">
-    <div class="burst" role="img" aria-label="Loading">
-      <div class="burst-core"></div>
-      <!-- Tiny star dust (white dots) flying outward -->
-      <span class="dust" style="--tx:-48px;--ty:-10px;--d:0ms;"></span>
-      <span class="dust" style="--tx:-32px;--ty:-34px;--d:20ms;"></span>
-      <span class="dust" style="--tx: 24px;--ty:-28px;--d:40ms;"></span>
-      <span class="dust" style="--tx: 42px;--ty:-12px;--d:60ms;"></span>
-      <span class="dust" style="--tx: 16px;--ty:  8px;--d:80ms;"></span>
-      <span class="dust" style="--tx:-20px;--ty: 14px;--d:100ms;"></span>
-      <span class="dust" style="--tx:-34px;--ty: 30px;--d:120ms;"></span>
-      <span class="dust" style="--tx: 10px;--ty: 36px;--d:140ms;"></span>
-      <span class="dust" style="--tx: 30px;--ty: 22px;--d:160ms;"></span>
-      <span class="dust" style="--tx:-10px;--ty:-22px;--d:180ms;"></span>
-      <span class="dust" style="--tx:  6px;--ty:-40px;--d:200ms;"></span>
-      <span class="dust" style="--tx:-6px; --ty: 40px;--d:220ms;"></span>
-      <span class="dust" style="--tx: 44px;--ty:  8px;--d:240ms;"></span>
-      <span class="dust" style="--tx:-44px;--ty: -2px;--d:260ms;"></span>
-      <span class="dust" style="--tx:  0px;--ty: 46px;--d:280ms;"></span>
-      <span class="dust" style="--tx:  0px;--ty:-46px;--d:300ms;"></span>
+    <div class="stardust-burst" role="img" aria-label="Loading">
+      <!-- Tiny white dots flying outwards -->
+      <span class="dust" style="--tx:-50px;--ty:-10px;--d:0ms;"></span>
+      <span class="dust" style="--tx:-36px;--ty:-34px;--d:20ms;"></span>
+      <span class="dust" style="--tx: 28px;--ty:-26px;--d:40ms;"></span>
+      <span class="dust" style="--tx: 46px;--ty:-12px;--d:60ms;"></span>
+      <span class="dust" style="--tx: 18px;--ty:  8px;--d:80ms;"></span>
+      <span class="dust" style="--tx:-22px;--ty: 14px;--d:100ms;"></span>
+      <span class="dust" style="--tx:-36px;--ty: 30px;--d:120ms;"></span>
+      <span class="dust" style="--tx: 12px;--ty: 38px;--d:140ms;"></span>
+      <span class="dust" style="--tx: 32px;--ty: 22px;--d:160ms;"></span>
+      <span class="dust" style="--tx:-12px;--ty:-22px;--d:180ms;"></span>
+      <span class="dust" style="--tx:  8px;--ty:-42px;--d:200ms;"></span>
+      <span class="dust" style="--tx: -8px;--ty: 42px;--d:220ms;"></span>
+      <span class="dust" style="--tx: 48px;--ty:  8px;--d:240ms;"></span>
+      <span class="dust" style="--tx:-48px;--ty: -2px;--d:260ms;"></span>
+      <span class="dust" style="--tx:  0px;--ty: 48px;--d:280ms;"></span>
+      <span class="dust" style="--tx:  0px;--ty:-48px;--d:300ms;"></span>
+      <!-- a few more for density -->
+      <span class="dust sm" style="--tx:-20px;--ty:-12px;--d:60ms;"></span>
+      <span class="dust sm" style="--tx: 24px;--ty: 16px;--d:110ms;"></span>
+      <span class="dust sm" style="--tx:-16px;--ty: 24px;--d:150ms;"></span>
+      <span class="dust sm" style="--tx: 18px;--ty:-20px;--d:190ms;"></span>
+      <span class="dust sm" style="--tx:-26px;--ty:  6px;--d:230ms;"></span>
+      <span class="dust sm" style="--tx: 10px;--ty: -8px;--d:270ms;"></span>
     </div>
   </div>
 
@@ -88,7 +94,7 @@
         </div>
         <p id="composeHint" class="hint">Your note travels to your secret constellation (a JSON file in your GitHub repo) when you press send.</p>
 
-        <!-- Settings icon moved below the hint (left-aligned) -->
+        <!-- Settings icon below the hint (forced left-aligned) -->
         <div class="under-hint">
           <button id="settingsBtn" class="icon-chip" aria-label="Open settings">⚙️ Settings</button>
         </div>
