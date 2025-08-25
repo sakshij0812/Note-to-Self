@@ -1,5 +1,3 @@
-// Aurora Mailbox – PWA using GitHub Contents API as a cozy store ✨
-
 // Hardcoded constellation (change in code if you like)
 /* Ensure the repo exists and your token has:
    - Repository permissions → Contents: Read and write
@@ -351,24 +349,19 @@ function setupUpdateFlow() {
   if (!('serviceWorker' in navigator)) return;
 
   navigator.serviceWorker.register('./sw.js').then((reg) => {
-    // If there's an update already waiting when the page loads
     if (reg.waiting) {
       showUpdateModal(reg);
     }
-
-    // Listen for new updates
     reg.addEventListener('updatefound', () => {
       const newWorker = reg.installing;
       if (!newWorker) return;
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          // New update installed, waiting to activate
           showUpdateModal(reg);
         }
       });
     });
 
-    // After we tell the waiting SW to activate, reload once controlled by it
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (refreshing) return;
@@ -384,9 +377,7 @@ function showUpdateModal(reg) {
 
   const close = () => (typeof dlg.close === 'function' ? dlg.close() : dlg.removeAttribute('open'));
   const updateNow = () => {
-    if (reg.waiting) {
-      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
+    if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
     close();
   };
 
@@ -426,19 +417,23 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#shareBtn').addEventListener('click', shareCurrent);
   $('#deleteBtn').addEventListener('click', deleteCurrent);
 
-  // Footer credit — shows a sweet note
+  // Footer credit — flip to reveal note
   const credit = $('#creditLink');
   if (credit) {
-    const showNote = () => alert('An S² Labs Product');
-    credit.addEventListener('click', showNote);
+    const flipOnce = () => {
+      credit.classList.add('flipped');
+      credit.setAttribute('aria-pressed', 'true');
+      // Unflip after a moment so both sides can be seen with tap
+      setTimeout(() => {
+        credit.classList.remove('flipped');
+        credit.setAttribute('aria-pressed', 'false');
+      }, 2400);
+    };
+    credit.addEventListener('click', flipOnce);
     credit.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); showNote(); }
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); flipOnce(); }
     });
-    credit.style.cursor = 'pointer';
   }
-
-  // Preload inbox if token present
-  if (magicToken) refreshInbox();
 
   // Register service worker with "update available" flow
   setupUpdateFlow();

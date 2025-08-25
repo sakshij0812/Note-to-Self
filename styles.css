@@ -237,6 +237,42 @@ input:focus, textarea:focus{ border-color: #ffd0f0; box-shadow: 0 0 0 6px rgba(2
   backdrop-filter: blur(4px);
 }
 
+/* Flip credit animation */
+.flip{
+  display:inline-block;
+  perspective: 900px;
+  cursor: pointer;
+  user-select: none;
+}
+.flip-inner{
+  position: relative;
+  display:inline-block;
+  transform-style: preserve-3d;
+  transition: transform 600ms cubic-bezier(.2,.8,.2,1);
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+.flip .front, .flip .back{
+  display:inline-block;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
+  min-width: 220px;
+  text-align: center;
+}
+.flip .back{
+  position:absolute;
+  inset: 0 auto auto 0;
+  transform: rotateY(180deg);
+}
+.flip.flipped .flip-inner{
+  transform: rotateY(180deg) translateZ(0);
+}
+.flip:focus .flip-inner, .flip:hover .flip-inner{
+  box-shadow: 0 6px 18px rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+}
+
 .sep{ height:1px; background: linear-gradient(90deg, transparent, #ffffff44, transparent); margin: 12px 0; }
 .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
 
