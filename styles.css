@@ -28,6 +28,57 @@ body{
   text-rendering: optimizeLegibility;
 }
 
+/* 1s magical loading */
+.loading-screen{
+  position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  opacity: 1; transition: opacity .35s ease, visibility .35s ease;
+  visibility: visible;
+  overflow: hidden;
+}
+.loading-screen.hide{ opacity: 0; visibility: hidden; }
+.loading-aurora{
+  position:absolute; inset:-10%;
+  background:
+    radial-gradient(50% 60% at 20% 30%, rgba(246,167,217,0.20), transparent 60%),
+    radial-gradient(60% 60% at 80% 20%, rgba(169,139,255,0.18), transparent 60%),
+    radial-gradient(70% 60% at 40% 90%, rgba(110,231,231,0.12), transparent 60%),
+    linear-gradient(180deg, rgba(13,10,20,0.85), rgba(13,10,20,0.85));
+  filter: blur(8px);
+}
+.loading-shimmer{
+  position:absolute; inset: -40%;
+  background: linear-gradient(120deg,
+    rgba(255,255,255,0) 0%,
+    rgba(186,104,200,0.10) 40%,
+    rgba(255,255,255,0.28) 50%,
+    rgba(186,104,200,0.10) 60%,
+    rgba(255,255,255,0) 100%);
+  transform: rotate(10deg);
+  animation: shimmer 1s linear infinite;
+}
+.loading-stars{
+  position:absolute; inset:0; opacity: .35;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, #fff8, transparent 40%),
+    radial-gradient(2px 2px at 70% 20%, #fff6, transparent 40%),
+    radial-gradient(2px 2px at 40% 80%, #fff9, transparent 40%),
+    radial-gradient(2px 2px at 85% 70%, #fff6, transparent 40%),
+    radial-gradient(1.5px 1.5px at 10% 90%, #fff4, transparent 40%),
+    radial-gradient(1.5px 1.5px at 95% 40%, #fff5, transparent 40%);
+  animation: twinkle 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes shimmer{
+  from{ transform: translateX(-10%) rotate(10deg); }
+  to{ transform: translateX(10%) rotate(10deg); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .loading-shimmer{ animation: none; }
+  .loading-stars{ animation: none; }
+}
+
+/* Background aurora */
 .aurora{
   position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:0;
 }
@@ -57,9 +108,7 @@ body{
     radial-gradient(2px 2px at 20% 30%, #fff8, transparent 40%),
     radial-gradient(2px 2px at 70% 20%, #fff6, transparent 40%),
     radial-gradient(2px 2px at 40% 80%, #fff9, transparent 40%),
-    radial-gradient(2px 2px at 85% 70%, #fff6, transparent 40%),
-    radial-gradient(1.5px 1.5px at 10% 90%, #fff4, transparent 40%),
-    radial-gradient(1.5px 1.5px at 95% 40%, #fff5, transparent 40%);
+    radial-gradient(2px 2px at 85% 70%, #fff6, transparent 40%);
   animation: twinkle 6s ease-in-out infinite alternate;
 }
 @keyframes twinkle{ from{opacity:0.6} to{opacity:1} }
@@ -86,7 +135,6 @@ body{
   backdrop-filter: blur(2px);
 }
 .modal.glass{
-  /* stronger, colder frost */
   background:
     linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10));
   border: 1px solid rgba(255,255,255,0.38);
@@ -95,7 +143,6 @@ body{
   box-shadow: 0 20px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
 }
 .modal.glass::before{
-  /* subtle frost crystals + noise */
   content:"";
   position:absolute; inset:0;
   border-radius: inherit;
@@ -116,12 +163,6 @@ body{
 }
 .brand{ display:flex; align-items:center; gap:10px; }
 .brand .logo{ font-size:22px; }
-.brand h1{
-  font-family:'Comfortaa', cursive; font-weight:700; letter-spacing:0.5px;
-  font-size:18px; margin:0;
-  background: linear-gradient(90deg, var(--pink), var(--lav), var(--aqua), var(--gold));
-  -webkit-background-clip:text; background-clip:text; color:transparent;
-}
 
 .container{ position:relative; z-index:1; padding: 6px 12px 90px; max-width: 940px; margin: 0 auto; }
 
@@ -142,10 +183,7 @@ body{
 .panel{ display:none; }
 .panel.active{ display:block; }
 
-.card{
-  padding:14px; border-radius:18px;
-}
-
+.card{ padding:14px; border-radius:18px; }
 h2{ margin:6px 0 12px; font-size:20px; }
 .field{ display:flex; flex-direction:column; gap:8px; margin: 10px 0 14px; }
 .field span{ color: #ffe1f6; font-weight:700; font-size:12px; letter-spacing:0.4px; text-transform: uppercase; }
@@ -171,7 +209,6 @@ input:focus, textarea:focus{ border-color: #ffd0f0; box-shadow: 0 0 0 6px rgba(2
   background: linear-gradient(90deg, #ffd9f2, #e3d5ff 60%, #caffff);
   box-shadow: 0 10px 22px rgba(246,167,217,.35), inset 0 0 0 1px rgba(255,255,255,0.8);
 }
-
 .btn.ghost{
   background: transparent; color: var(--muted); border: 1px dashed var(--stroke);
 }
