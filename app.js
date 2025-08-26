@@ -22,6 +22,9 @@ let currentSha = null;
 let openedId = null;
 let selectedImages = [];
 
+// Track last known connectivity to avoid spammy "Back online" messages
+let lastConnectivity = (typeof navigator !== 'undefined' ? navigator.onLine : true);
+
 // Calendar constraints: start Sep 2025, do not go back before it
 const MIN_CAL_YEAR = 2025;
 const MIN_CAL_MONTH = 8; // 0-based (September)
@@ -361,10 +364,33 @@ function updateOnlineUI(isOnline){
   $('#imageInput')?.toggleAttribute('disabled', !isOnline);
 }
 function handleConnectivityChange(){
-  const isOnline = navigator.onLine; updateOnlineUI(isOnline);
+  const isOnline = navigator.onLine;
+  updateOnlineUI(isOnline);
+
   const status = $('#composeStatus');
-  if (isOnline){ closeOfflineModal(); if (status) sparkleStatus(status, 'Back online ✨'); }
-  else { openOfflineModal(); if (status) sparkleStatus(status, 'Offline. Sending and photo uploads are disabled.', 'error'); }
+
+  if (isOnline){
+    // Only show "Back online" briefly if user actually transitioned from offline -> online
+    if (lastConnectivity === false && status){
+      sparkleStatus(status, 'Back online ✨');
+      // Clear after a short delay, but only if unchanged (avoid clobbering other messages)
+      const shownAt = Date.now();
+      setTimeout(()=>{
+        if (!status) return;
+        // If no other message replaced it, clear
+        if (status.textContent.trim() === 'Back online ✨'){
+          status.textContent = '';
+        }
+      }, 2000);
+    }
+    closeOfflineModal();
+  } else {
+    // Went offline: show a clear error once
+    if (status) sparkleStatus(status, 'Offline. Sending and photo uploads are disabled.', 'error');
+    openOfflineModal();
+  }
+
+  lastConnectivity = isOnline;
 }
 
 /* ---------- Compose ---------- */
@@ -443,7 +469,7 @@ function closeTokenModal(){ const dlg = $('#tokenModal'); if (typeof dlg.close==
 function setupSettings(){
   $('#settingsBtn').addEventListener('click', ()=>{ $('#settingsModal').showModal(); });
   $('#closeSettings').addEventListener('click', ()=>{ $('#settingsModal').close(); });
-  $('#reenterTokenBtn').addEventListener('click', ()=>{ $('#settingsModal').close(); openTokenModal(true); });
+  $('#reenterTokenBtn').addEventListener('click', ()=>{ $('#settingsModal')?.close(); openTokenModal(true); });
   $('#forgetTokenBtn').addEventListener('click', ()=>{ if (confirm('Forget your Magic Key on this device?')){ forgetToken(); alert('Magic Key forgotten. You’ll be asked again next time ✨'); } });
 }
 
