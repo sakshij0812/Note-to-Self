@@ -67,8 +67,8 @@
 
   <main class="container">
     <nav class="tabs glass">
-      <button class="tab active" data-tab="compose" aria-controls="composePanel">💌 Send Magic</button>
-      <button class="tab" data-tab="inbox" aria-controls="inboxPanel">📚 My Letters</button>
+      <button class="tab active" type="button" data-tab="compose" aria-controls="composePanel">💌 Send Magic</button>
+      <button class="tab" type="button" data-tab="inbox" aria-controls="inboxPanel">📚 My Letters</button>
     </nav>
 
     <section id="composePanel" class="panel active">
@@ -89,8 +89,8 @@
         <div class="field">
           <span>Photos</span>
           <div class="image-controls">
-            <button id="addPhotosBtn" class="btn">Add photos</button>
-            <button id="clearPhotosBtn" class="btn ghost small">Clear photos</button>
+            <button id="addPhotosBtn" class="btn" type="button">Add photos</button>
+            <button id="clearPhotosBtn" class="btn ghost small" type="button">Clear photos</button>
             <input id="imageInput" type="file" accept="image/*" multiple hidden />
           </div>
           <div id="imagePreview" class="image-previews" aria-live="polite"></div>
@@ -98,12 +98,12 @@
         </div>
 
         <div class="actions">
-          <button id="sendBtn" class="btn primary">Send to future 🚀</button>
-          <button id="clearBtn" class="btn ghost">Clear</button>
+          <button id="sendBtn" class="btn primary" type="button">Send to future 🚀</button>
+          <button id="clearBtn" class="btn ghost" type="button">Clear</button>
         </div>
         <p id="composeHint" class="hint">Your note travels to your secret constellation (a JSON file in your GitHub repo) when you press send.</p>
         <div class="under-hint">
-          <button id="settingsBtn" class="icon-chip" aria-label="Open settings">⚙️ Settings</button>
+          <button id="settingsBtn" class="icon-chip" type="button" aria-label="Open settings">⚙️ Settings</button>
         </div>
         <p id="composeStatus" class="status"></p>
       </div>
@@ -112,15 +112,15 @@
     <section id="inboxPanel" class="panel">
       <div class="inbox-controls">
         <div class="left-controls">
-          <button id="toggleCalendarBtn" class="btn small" aria-expanded="false" aria-controls="calendarDropdown">📅 Calendar</button>
-          <button id="clearFilterBtn" class="btn small ghost" hidden>Clear date filter</button>
+          <button id="toggleCalendarBtn" class="btn small" type="button" aria-expanded="false" aria-controls="calendarDropdown">📅 Calendar</button>
+          <button id="clearFilterBtn" class="btn small ghost" type="button" hidden>Clear date filter</button>
           <span id="activeFilterChip" class="chip" hidden>
             <span class="chip-text"></span>
-            <button id="chipClearBtn" class="chip-x" aria-label="Clear date filter">×</button>
+            <button id="chipClearBtn" class="chip-x" type="button" aria-label="Clear date filter">×</button>
           </span>
         </div>
         <div class="right-controls">
-          <button id="refreshBtn" class="btn small">Refresh ✨</button>
+          <button id="refreshBtn" class="btn small" type="button">Refresh ✨</button>
           <span id="inboxStatus" class="status"></span>
         </div>
       </div>
@@ -129,9 +129,9 @@
       <div id="calendarDropdown" class="dropdown-panel glass" role="dialog" aria-modal="false" aria-labelledby="calTitle" hidden>
         <div class="cal-header">
           <div class="nav">
-            <button id="calPrev" class="icon-btn" aria-label="Previous month">◀</button>
-            <button id="calToday" class="btn small ghost">Today</button>
-            <button id="calNext" class="icon-btn" aria-label="Next month">▶</button>
+            <button id="calPrev" class="icon-btn" type="button" aria-label="Previous month">◀</button>
+            <button id="calToday" class="btn small ghost" type="button">Today</button>
+            <button id="calNext" class="icon-btn" type="button" aria-label="Next month">▶</button>
           </div>
           <div class="cal-title-wrap">
             <div id="calTitle" class="cal-title" aria-live="polite">Month YYYY</div>
@@ -157,7 +157,7 @@
           <p class="note-preview diary-text"></p>
           <div class="note-meta">
             <span class="date"></span>
-            <button class="read-btn">Open</button>
+            <button class="read-btn" type="button">Open</button>
           </div>
         </article>
       </template>
@@ -168,13 +168,13 @@
   <dialog id="readerModal" class="modal glass">
     <div class="modal-header sticky">
       <h3 id="readerTitle">Title</h3>
-      <button id="closeReader" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
+      <button id="closeReader" class="icon-btn modal-close" type="button" aria-label="Close" title="Close">×</button>
     </div>
     <article id="readerBody" class="reader-body diary-text"></article>
     <div id="readerGallery" class="gallery"></div>
     <div class="modal-footer">
-      <button id="deleteBtn" class="btn danger">Delete</button>
-      <button id="shareBtn" class="btn">Share</button>
+      <button id="deleteBtn" class="btn danger" type="button">Delete</button>
+      <button id="shareBtn" class="btn" type="button">Share</button>
     </div>
   </dialog>
 
@@ -205,7 +205,7 @@
         </details>
       </div>
       <div class="modal-footer">
-        <button class="btn primary" id="saveTokenBtn">Begin the magic ✨</button>
+        <button class="btn primary" id="saveTokenBtn" type="submit">Begin the magic ✨</button>
       </div>
       <p class="hint modal-hint">Your name and Magic Key are saved only on this device. You can remove them anytime in Settings.</p>
     </form>
@@ -214,14 +214,14 @@
   <dialog id="settingsModal" class="modal glass sm">
     <div class="modal-header">
       <h3>Magic Key ✨</h3>
-      <button id="closeSettings" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
+      <button id="closeSettings" class="icon-btn modal-close" type="button" aria-label="Close" title="Close">×</button>
     </div>
     <div class="settings-body modal-body">
       <p class="soft">Manage your secret Magic Key (GitHub token) here.</p>
       <div class="sep"></div>
       <div class="grid2">
-        <button id="reenterTokenBtn" class="btn">Re-enter Magic Key / Name</button>
-        <button id="forgetTokenBtn" class="btn danger">Forget Magic Key</button>
+        <button id="reenterTokenBtn" class="btn" type="button">Re-enter Magic Key / Name</button>
+        <button id="forgetTokenBtn" class="btn danger" type="button">Forget Magic Key</button>
       </div>
       <p class="hint">Your secret lives only on this device. Re-enter or forget it anytime.</p>
     </div>
@@ -230,20 +230,20 @@
   <dialog id="updateModal" class="modal glass sm">
     <div class="modal-header">
       <h3>Fresh Starlight Awaits ✨</h3>
-      <button id="closeUpdate" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
+      <button id="closeUpdate" class="icon-btn modal-close" type="button" aria-label="Close" title="Close">×</button>
     </div>
     <article class="reader-body modal-body">
       <p>A new sprinkle of Reflections magic is ready. Update now or later?</p>
     </article>
     <div class="modal-footer">
-      <button id="updateLaterBtn" class="btn ghost">Later</button>
-      <button id="updateNowBtn" class="btn primary">Update now ✨</button>
+      <button id="updateLaterBtn" class="btn ghost" type="button">Later</button>
+      <button id="updateNowBtn" class="btn primary" type="button">Update now ✨</button>
     </div>
   </dialog>
 
   <!-- Footer now only at page bottom (not fixed) -->
   <footer class="app-footer">
-    <button id="creditLink" class="flip" aria-label="Credits" aria-pressed="false" aria-expanded="false">
+    <button id="creditLink" class="flip" type="button" aria-label="Credits" aria-pressed="false" aria-expanded="false">
       <span class="flip-inner">
         <span class="front">&lt;/&gt; with 🪄 by Spandan.</span>
         <span class="back">An S² Labs Product</span>
