@@ -170,11 +170,15 @@ body{
   position: relative; z-index: 1;
   padding: 22px 12px 4px; display:flex; justify-content:center;
   transition: padding .25s ease;
+  /* Prevent header from capturing clicks except the brand block */
+  pointer-events: none;
 }
 .brand{
   display:flex; align-items:center; gap:12px; padding: 10px 14px;
   border-radius: 16px;
-  transition: transform .35s cubic-bezier(.2,.8,.2,1), padding .2s ease, border-radius .25s ease, background .25s ease, left .25s ease, top .25s ease, width .25s ease, box-shadow .25s ease;
+  transition: padding .2s ease, border-radius .25s ease, background .25s ease, left .25s ease, top .25s ease, width .25s ease, box-shadow .25s ease;
+  /* Re-enable click on the brand itself */
+  pointer-events: auto;
 }
 .brand-mark{
   width:36px; height:36px; border-radius: 50%;
@@ -193,28 +197,28 @@ body{
   transition: color .25s ease, font-size .25s ease;
 }
 
-/* Floating, one-line brand on scroll */
+/* Floating, one-line brand on scroll (no transforms to avoid stacking bugs) */
 body.brand-floating .brand{
   position: fixed;
   top: calc(var(--safe-top, 0px) + 10px);
   left: 12px;
-  right: auto;
-  transform: translate3d(0,0,0) scale(0.86);
+  right: 12px;
+  /* No transform: keep on top of composited layers reliably */
   padding: 8px 12px;
   border-radius: 999px;
-  backdrop-filter: blur(10px) saturate(140%);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-  background: linear-gradient(180deg, color-mix(in srgb, #ffffff 78%, transparent), color-mix(in srgb, #ffffff 55%, transparent));
+  /* Use opaque-ish gradient instead of backdrop-filter (iOS fixed+backdrop filter glitch) */
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82));
   border: 1px solid color-mix(in srgb, var(--txt) 10%, transparent);
-  box-shadow: 0 12px 26px rgba(150,110,200,0.18);
-  z-index: 60;
-  max-width: min(92vw, 680px);
+  box-shadow: 0 16px 36px rgba(150,110,200,0.22);
+  z-index: 1001; /* Above cards, dropdowns, etc. Dialogs still win via top layer */
+  max-width: min(980px, 92vw);
+  margin: 0 auto;
 }
 @media (prefers-color-scheme: dark){
   body.brand-floating .brand{
-    background: color-mix(in srgb, #000000 55%, transparent);
+    background: rgba(16,12,22,0.78);
     border-color: color-mix(in srgb, #ffffff 18%, transparent);
-    box-shadow: 0 16px 34px rgba(0,0,0,0.45);
+    box-shadow: 0 22px 42px rgba(0,0,0,0.55);
   }
 }
 body.brand-floating .brand-mark{
