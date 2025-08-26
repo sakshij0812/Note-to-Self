@@ -1,6 +1,6 @@
 {
-  "name": "Time Capsule",
-  "short_name": "Time Capsule",
+  "name": "Reflection",
+  "short_name": "Reflection",
   "description": "A magical, cozy mailbox to write to yourself and keep your letters among the stars ✨",
   "start_url": "./",
   "scope": "./",
