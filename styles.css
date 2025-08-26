@@ -282,7 +282,6 @@ input, textarea{
   font: inherit; outline: none;
 }
 input::placeholder, textarea::placeholder{ color: color-mix(in srgb, var(--muted) 60%, #ffffff 40%); }
-/* Improve placeholder legibility on dark */
 @media (prefers-color-scheme: dark){
   input::placeholder, textarea::placeholder{
     color: color-mix(in srgb, #ffffff 70%, transparent);
@@ -383,7 +382,7 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
-@media (min-width:700px){
+@media (prefers-color-scheme: dark){
   .gallery{ grid-template-columns: repeat(3, 1fr); }
 }
 .gallery img{
@@ -502,6 +501,19 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
   border-color: color-mix(in srgb, var(--pink) 75%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--pink) 45%, transparent) inset, 0 6px 16px rgba(246,167,217,0.25);
 }
+
+/* New: disabled states for "no going back" */
+.cal-day[disabled]{
+  opacity: .35;
+  pointer-events: none;
+  filter: grayscale(.2);
+}
+.cal-header .icon-btn[disabled]{
+  opacity: .4;
+  cursor: not-allowed;
+  filter: grayscale(.2);
+}
+
 .cal-legend{
   margin-top: 8px; font-size: 11px; color: var(--muted-2);
   display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
@@ -534,8 +546,6 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
 }
 .streak-chip .fire{ font-size: 16px; }
 
-/* Make calendar days nice on hover */
+/* Hover niceties */
 .cal-day:hover{ filter: brightness(1.02); transform: translateY(0); }
-
-/* Make icon buttons slightly larger hit area in calendar header */
 .cal-header .icon-btn{ padding: 6px 8px; }

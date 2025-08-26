@@ -23,8 +23,13 @@ let openedId = null; // track by id instead of index for safety
 let selectedImages = []; // images chosen for the next entry
 
 // New: calendar and filtering state
-let calYear = new Date().getFullYear();
-let calMonth = new Date().getMonth(); // 0-based
+// Lock calendar start to September 2025 and disallow going back before it.
+const MIN_CAL_YEAR = 2025;
+const MIN_CAL_MONTH = 8; // 0-based (8 = September)
+const MIN_CAL_DATE = new Date(MIN_CAL_YEAR, MIN_CAL_MONTH, 1);
+
+let calYear = MIN_CAL_YEAR;
+let calMonth = MIN_CAL_MONTH; // 0-based
 let activeFilterDateKey = null; // 'YYYY-MM-DD'
 
 // Helpers
@@ -42,7 +47,7 @@ const decode64 = (b64) => {
 const datePretty = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 const rawUrl = (path) => `https://raw.githubusercontent.com/${OWNER}/${REPO}/${encodeURIComponent(BRANCH)}/${path.split('/').map(encodeURIComponent).join('/')}`;
 
-// New: date helpers for local-day keys
+// Date helpers
 function pad2(n) { return String(n).padStart(2, '0'); }
 function dateKeyFromDate(d) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -57,6 +62,15 @@ function addDays(d, delta) {
   return nd;
 }
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// Month compare and clamp helpers
+function isBeforeMinMonth(y, m) {
+  return y < MIN_CAL_YEAR || (y === MIN_CAL_YEAR && m < MIN_CAL_MONTH);
+}
+function clampToMinMonth(date) {
+  if (isBeforeMinMonth(date.getFullYear(), date.getMonth())) return new Date(MIN_CAL_YEAR, MIN_CAL_MONTH, 1);
+  return date;
+}
 
 // Token + name storage
 function loadToken() {
@@ -116,7 +130,6 @@ function getRandomGreeting(name) {
 function updateGreeting() {
   const el = $('#greetingTitle');
   if (el) el.textContent = getRandomGreeting(displayName);
-  // streak updates separately
 }
 
 // GitHub Contents API: get file
@@ -256,11 +269,8 @@ async function blobToBase64(blob) {
 }
 
 /* ---------- Image display/fetch (handles private repos and raw CDN delay) ---------- */
-
-// Memory cache of object URLs so we don't refetch the same path
 const imageObjectUrlCache = new Map();
 
-// Try to extract repo path from a raw.githubusercontent URL
 function pathFromRawUrl(u) {
   try {
     const m = u.match(/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(.+)$/);
@@ -269,7 +279,6 @@ function pathFromRawUrl(u) {
   return null;
 }
 
-// Fetch image bytes via Contents API (auth) and return an object URL
 async function getObjectUrlForPath(path) {
   if (imageObjectUrlCache.has(path)) return imageObjectUrlCache.get(path);
 
@@ -284,7 +293,6 @@ async function getObjectUrlForPath(path) {
   return objUrl;
 }
 
-// Robust loader: accepts either a repo-relative path ("data/images/...") or a raw URL
 function loadImageIntoElement(imgEl, stored) {
   imgEl.onerror = null;
 
@@ -338,7 +346,7 @@ function sparkleStatus(el, msg, kind = 'info') {
   el.style.color = kind === 'error' ? '#ffb8c8' : '#ffd7ff';
 }
 
-// New: get filtered list for inbox rendering
+// Filtered list for inbox
 function getDisplayEmails() {
   if (!activeFilterDateKey) return emails;
   return emails.filter(e => dateKeyFromISO(e.createdAt || new Date().toISOString()) === activeFilterDateKey);
@@ -482,7 +490,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-/* ---------- Offline handling: dialog + disable adding ---------- */
+/* ---------- Offline handling ---------- */
 function ensureOfflineModal() {
   let dlg = $('#offlineModal');
   if (dlg) return dlg;
@@ -764,20 +772,32 @@ function buildEntryDateSet() {
 }
 
 function setCalendarTo(date) {
-  calYear = date.getFullYear();
-  calMonth = date.getMonth();
+  const clamped = clampToMinMonth(date);
+  calYear = clamped.getFullYear();
+  calMonth = clamped.getMonth();
 }
 
 function renderCalendar() {
   const titleEl = $('#calTitle');
   const grid = $('#calendarGrid');
   const clearBtn = $('#clearFilterBtn');
+  const prevBtn = $('#calPrev');
   if (!titleEl || !grid) return;
 
+  // Title
   titleEl.textContent = `${MONTHS[calMonth]} ${calYear}`;
 
+  // Disable prev button at min month
+  const atMinMonth = (calYear === MIN_CAL_YEAR && calMonth === MIN_CAL_MONTH);
+  if (prevBtn) {
+    prevBtn.disabled = atMinMonth;
+    prevBtn.setAttribute('aria-disabled', atMinMonth ? 'true' : 'false');
+  }
+
+  // Grid
   grid.innerHTML = '';
 
+  // Weekday header (Sun..Sat)
   const weekdayNames = Array.from({ length: 7 }, (_, i) =>
     new Date(1970, 0, 4 + i).toLocaleDateString([], { weekday: 'short' })
   );
@@ -796,6 +816,7 @@ function renderCalendar() {
   const todayKey = dateKeyFromDate(new Date());
   const entryDays = buildEntryDateSet();
 
+  // 6 weeks x 7 days
   for (let i = 0; i < 42; i++) {
     const d = addDays(gridStart, i);
     const isOtherMonth = d.getMonth() !== calMonth;
@@ -803,6 +824,7 @@ function renderCalendar() {
     const hasEntry = entryDays.has(key);
     const isToday = key === todayKey;
     const isSelected = activeFilterDateKey === key;
+    const beforeMin = isBeforeMinMonth(d.getFullYear(), d.getMonth());
 
     const cell = document.createElement('button');
     cell.type = 'button';
@@ -812,10 +834,19 @@ function renderCalendar() {
     cell.textContent = String(d.getDate());
     cell.dataset.key = key;
 
+    if (beforeMin) {
+      cell.disabled = true;
+      cell.setAttribute('aria-disabled', 'true');
+    }
+
     cell.addEventListener('click', () => {
+      if (cell.disabled) return;
       if (isOtherMonth) {
-        setCalendarTo(d);
-        setDateFilter(key);
+        // Only move if not going before min month
+        if (!isBeforeMinMonth(d.getFullYear(), d.getMonth())) {
+          setCalendarTo(d);
+          setDateFilter(key);
+        }
       } else {
         if (activeFilterDateKey === key) {
           setDateFilter(null);
@@ -832,6 +863,13 @@ function renderCalendar() {
 }
 
 function setDateFilter(dateKeyOrNull) {
+  if (dateKeyOrNull) {
+    const dt = new Date(dateKeyOrNull);
+    if (isBeforeMinMonth(dt.getFullYear(), dt.getMonth())) {
+      // Ignore attempts to filter before the allowed start
+      return;
+    }
+  }
   activeFilterDateKey = dateKeyOrNull;
   renderInbox();
   const status = $('#inboxStatus');
@@ -845,6 +883,7 @@ function setDateFilter(dateKeyOrNull) {
   renderCalendar();
 }
 
+// Compute and update streak chip on home screen
 function updateStreakChip() {
   const chip = $('#streakChip');
   if (!chip) return;
@@ -856,6 +895,7 @@ function updateStreakChip() {
 
   const entryDays = buildEntryDateSet();
   const today = new Date();
+  const todayKey = dateKeyFromDate(today);
 
   let streak = 0;
   let cursor = new Date(today);
@@ -892,7 +932,7 @@ window.addEventListener('DOMContentLoaded', () => {
     openTokenModal(false);
   }
 
-  // Token modal close via X
+  // Close token modal via X
   $('#closeToken')?.addEventListener('click', (e) => {
     e.preventDefault();
     closeTokenModal();
@@ -937,10 +977,11 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#shareBtn').addEventListener('click', shareCurrent);
   $('#deleteBtn').addEventListener('click', deleteCurrent);
 
-  // Calendar controls
+  // Calendar controls with "no going back"
   $('#calPrev')?.addEventListener('click', () => {
     const d = new Date(calYear, calMonth, 1);
     d.setMonth(d.getMonth() - 1);
+    if (isBeforeMinMonth(d.getFullYear(), d.getMonth())) return; // block
     setCalendarTo(d);
     renderCalendar();
   });
@@ -951,7 +992,9 @@ window.addEventListener('DOMContentLoaded', () => {
     renderCalendar();
   });
   $('#calToday')?.addEventListener('click', () => {
-    setCalendarTo(new Date());
+    let d = new Date();
+    if (isBeforeMinMonth(d.getFullYear(), d.getMonth())) d = new Date(MIN_CAL_YEAR, MIN_CAL_MONTH, 1);
+    setCalendarTo(d);
     renderCalendar();
   });
   $('#clearFilterBtn')?.addEventListener('click', () => setDateFilter(null));
@@ -982,12 +1025,11 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('online', handleConnectivityChange);
   window.addEventListener('offline', handleConnectivityChange);
 
-  // Initial calendar render (even before data)
-  setCalendarTo(new Date());
+  // Initial calendar render: start at September 2025
+  setCalendarTo(MIN_CAL_DATE);
   renderCalendar();
   updateStreakChip();
 
-  // If we already have a token, fetch immediately
   if (magicToken) {
     refreshInbox();
   }
