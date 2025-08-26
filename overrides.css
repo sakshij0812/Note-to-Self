@@ -1,42 +1,39 @@
-/* Safe-area bump to keep UI clear of iPhone status bar / Dynamic Island */
-/* Place this file after styles.css so these rules win. */
-
 :root{
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Push the whole app content down just a bit past the status bar */
+/* Push content past iOS status bar / Dynamic Island */
 .container{
-  /* old was: padding: 16px 12px 90px; */
+  /* Base had: padding: 10px 12px 32px; keep sides the same, bump top safely, and keep bottom modest for static footer */
   padding-top: max(16px, calc(var(--safe-top) + 14px));
   padding-right: 12px;
   padding-left: 12px;
-  padding-bottom: max(90px, calc(90px + var(--safe-bottom)));
+  padding-bottom: max(32px, calc(32px + var(--safe-bottom)));
 }
 
 /* Tabs sit right under the safe area */
 .tabs{ margin-top: 4px; }
 
-/* Make sure fixed footer also respects the home indicator area and sits LOWER */
+/* Footer: base UI uses a static footer. Respect safe-bottom padding, no positioning tweaks needed. */
 .app-footer{
-  /* Anchor to the very bottom and reduce the inner bottom padding so the text sits closer to the edge */
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px 12px calc(var(--safe-bottom) + 2px) !important; /* was ~10px + safe area; now tighter */
+  padding-bottom: calc(var(--safe-bottom) + 8px) !important;
 }
 
-/* Optional: dialogs align nicely without colliding with top inset */
+/* If you want a fixed footer instead, uncomment this block and increase container bottom padding above.
+.app-footer{
+  position: fixed !important;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
+}
+.container{
+  padding-bottom: max(90px, calc(90px + var(--safe-bottom))) !important;
+}
+*/
+
+/* Dialogs align nicely without colliding with top inset */
 .modal{ margin-top: max(10px, calc(var(--safe-top) + 6px)); }
-
-/* ---------------------------------------------------------- */
-/* Loader/starburst overrides — make the burst cover more screen */
-/* ---------------------------------------------------------- */
-
-/* Stronger full-screen veil while loading */
 .loading-screen{
-  /* Wider, denser radial to feel more “full” */
   background:
     radial-gradient(80vmax 80vmax at 50% 50%, rgba(255,255,255,0.50), rgba(255,255,255,0.70)),
     radial-gradient(80vmax 80vmax at 50% 50%, rgba(13,10,20,0.08), rgba(13,10,20,0.16));
@@ -47,16 +44,14 @@
   }
 }
 
-/* Make the starburst container larger and scale the outward travel much farther */
+/* Larger starburst and farther travel */
 .stardust-burst{
-  /* Scale travel distance of particles (multiplies the inline --tx/--ty values) */
-  --burst: 6; /* 6x the original throw distance */
-  /* Grow the visual footprint substantially */
+  --burst: 6; /* multiply travel distance of particles */
   width: min(80vmin, 720px);
   height: min(80vmin, 720px);
 }
 
-/* Beef up particle size and glow so they read at a larger scale, and extend duration */
+/* Beef up particles and glow; extend duration */
 .dust{
   width: 6px;
   height: 6px;
@@ -75,7 +70,7 @@
     0 0 18px rgba(169,139,255,0.38);
 }
 
-/* Multiply the travel distance by --burst so the burst covers more screen */
+/* Multiply travel distance for dustOut */
 @keyframes dustOut{
   0%   { transform: translate(-50%, -50%) scale(0.8); opacity: 0.95; }
   70%  { opacity: .5; }
@@ -90,35 +85,40 @@
   }
 }
 
-/* Respect reduced-motion: keep animations effectively disabled if user prefers it */
+/* Respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce){
   .dust{
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
 }
-/* Remove iOS grey tap highlight and any leftover background on interaction */
+
+/* ---------------------------------------------------------- */
+/* Interaction polish                                          */
+/* ---------------------------------------------------------- */
+
+/* Remove iOS grey tap highlight in footer area */
 #creditLink,
 .app-footer,
 .app-footer *{
   -webkit-tap-highlight-color: transparent;
 }
 
-/* The base stylesheet adds a subtle background on hover/focus; disable it */
+/* Disable flip chip hover background (keeps it ultra-clean) */
 .flip:focus .flip-inner,
 .flip:hover .flip-inner,
 .flip:active .flip-inner{
-  background: transparent !important;   /* kill the greyish selection */
-  box-shadow: none;                     /* optional: remove glow too; keep if you like */
+  background: transparent !important;
+  box-shadow: none;
 }
 
-/* Also ensure the credit itself doesn't paint a background from other styles */
+/* Ensure credit chip itself never paints a bg from other styles */
 #creditLink .flip-inner{
   background: transparent !important;
 }
-[hidden]{
-  display: none !important;
-}
+
+/* Attribute hidden should always hide */
+[hidden]{ display: none !important; }
 
 /* Do not render card thumbnails if they are hidden or lack a usable src */
 .note-card .note-thumb[hidden],
@@ -128,9 +128,7 @@
 }
 
 /* Hide the reader gallery entirely when there are no images */
-#readerGallery:empty{
-  display: none !important;
-}
+#readerGallery:empty{ display: none !important; }
 #mailTitle,
 .note-title,
 #readerTitle,
@@ -138,7 +136,7 @@
 .reader-body,
 #mailBody,
 .note-preview{
-  font-family: 'Patrick Hand', 'Manrope', system-ui, -apple-system, Segoe UI, Roboto, sans-serif !important;
+  font-family: 'Patrick Hand', 'Caveat', 'Manrope', system-ui, -apple-system, Segoe UI, Roboto, sans-serif !important;
 }
 
 /* Improve readability for long-form text */

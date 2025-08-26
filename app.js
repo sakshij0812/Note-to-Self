@@ -225,7 +225,7 @@ function setupTabs(){
   });
 }
 
-function sparkleStatus(el, msg, kind='info'){ el.textContent = msg; el.style.color = kind === 'error' ? '#ffb8c8' : '#ffd7ff'; }
+function sparkleStatus(el, msg, kind='info'){ el.textContent = msg; el.style.color = kind === 'error' ? '#ffb8c8' : '#7f5cff'; }
 
 function getDisplayEmails(){
   if (!activeFilterDateKey) return emails;
@@ -247,7 +247,7 @@ function renderInbox(){
   }
 
   if (!listToRender.length){
-    grid.innerHTML = `<div class="card glass" style="padding:16px; text-align:center;"><p>No letters ${activeFilterDateKey ? 'on this day' : 'yet'}. Your sky awaits its first sparkle 💖</p></div>`;
+    grid.innerHTML = `<div class="card paper" style="padding:16px; text-align:center;"><p>No letters ${activeFilterDateKey ? 'on this day' : 'yet'}. Your sky awaits its first sparkle 💖</p></div>`;
     return;
   }
 
@@ -266,7 +266,7 @@ function renderInbox(){
     grid.appendChild(node);
     const hues = ['#ffd9f2', '#e3d5ff', '#caffff', '#ffe7c2']; const pick = hues[idx % hues.length];
     card.style.border = '1px solid rgba(255,255,255,0.35)';
-    card.style.backgroundImage = `radial-gradient(220px 90px at 90% -10%, ${pick}55, transparent 60%)`;
+    card.style.backgroundImage = `radial-gradient(220px 90px at 90% -10%, ${pick}55, transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.5), transparent)`;
   });
 }
 
@@ -639,7 +639,7 @@ function outsideCloseHandler(e){
 }
 function escCloseHandler(e){ if (e.key === 'Escape') closeCalendarDropdown(); }
 
-/* ---------- Credit flip — fix sizing + accessibility ---------- */
+/* ---------- Credit flip ---------- */
 function setupCreditFlip(){
   const btn = $('#creditLink'); if (!btn) return;
   const inner = btn.querySelector('.flip-inner');
@@ -661,7 +661,7 @@ function setupCreditFlip(){
   btn.addEventListener('click', (e)=>{ e.preventDefault(); toggle(); });
   btn.addEventListener('keydown', (ev)=>{ if (ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); toggle(); } });
 
-  // Auto unflip after a moment for better UX
+  // Auto unflip after a moment
   btn.addEventListener('transitionend', ()=>{
     if (btn.classList.contains('flipped')){
       setTimeout(()=>{ btn.classList.remove('flipped'); btn.setAttribute('aria-pressed','false'); btn.setAttribute('aria-expanded','false'); }, 2200);
@@ -744,7 +744,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   window.addEventListener('online', handleConnectivityChange);
   window.addEventListener('offline', handleConnectivityChange);
 
-  // Initial calendar state & streak (dropdown stays closed by default)
+  // Initial calendar state & streak (dropdown closed by default)
   setCalendarTo(MIN_CAL_DATE);
   renderCalendar();
   updateStreakChip();

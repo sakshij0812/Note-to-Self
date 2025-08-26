@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
 
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f6ff" />
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0a14" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fff7fb" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0a14" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Reflections" />
@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="overrides.css" />
 </head>
 <body>
-  <!-- 1s loading — pure star-dust burst -->
+  <!-- 1s loading — sparkly burst -->
   <div id="loadingScreen" class="loading-screen" aria-hidden="true">
     <div class="stardust-burst" role="img" aria-label="Loading">
       <span class="dust" style="--tx:-50px;--ty:-10px;--d:0ms;"></span>
@@ -57,33 +57,49 @@
     </div>
   </div>
 
-  <!-- Aurora background -->
+  <!-- Dreamy background -->
   <div class="aurora">
     <span class="blob b1"></span>
     <span class="blob b2"></span>
     <span class="blob b3"></span>
     <span class="stars"></span>
+    <span class="sprinkles s1"></span>
+    <span class="sprinkles s2"></span>
   </div>
+
+  <header class="app-header">
+    <div class="brand glass">
+      <div class="brand-mark">✿</div>
+      <div class="brand-text">
+        <h1>Reflections</h1>
+        <p>Write softly. Glow brightly.</p>
+      </div>
+    </div>
+  </header>
 
   <main class="container">
     <nav class="tabs glass">
-      <button class="tab active" data-tab="compose" aria-controls="composePanel">💌 Send Magic</button>
-      <button class="tab" data-tab="inbox" aria-controls="inboxPanel">📚 My Letters</button>
+      <button class="tab active" data-tab="compose" aria-controls="composePanel">💌 Compose</button>
+      <button class="tab" data-tab="inbox" aria-controls="inboxPanel">📚 Library</button>
     </nav>
 
     <section id="composePanel" class="panel active">
-      <div class="card glass">
+      <div class="card paper">
+        <div class="paper-tape t1" aria-hidden="true"></div>
+        <div class="paper-tape t2" aria-hidden="true"></div>
+
         <h2 id="greetingTitle">Welcome ✨</h2>
         <div id="streakWrap" class="streak-wrap" aria-live="polite">
           <span id="streakChip" class="streak-chip" hidden>🔥 0-day streak</span>
         </div>
+
         <label class="field">
           <span>Title</span>
           <input id="mailTitle" type="text" placeholder="A tiny sparkle of thought..." maxlength="120" />
         </label>
         <label class="field">
           <span>Body</span>
-          <textarea id="mailBody" rows="8" class="diary-text" placeholder="Pour your heart out with glitter and grace..."></textarea>
+          <textarea id="mailBody" rows="10" class="diary-text" placeholder="Pour your heart out with glitter and grace..."></textarea>
         </label>
 
         <div class="field">
@@ -151,7 +167,8 @@
 
       <div id="inboxGrid" class="masonry"></div>
       <template id="cardTemplate">
-        <article class="note-card glass">
+        <article class="note-card paper card">
+          <div class="polaroid-pin" aria-hidden="true">★</div>
           <img class="note-thumb" alt="" hidden loading="lazy" />
           <h3 class="note-title"></h3>
           <p class="note-preview diary-text"></p>
@@ -178,7 +195,7 @@
     </div>
   </dialog>
 
-  <!-- Smaller, cleaner popups -->
+  <!-- Token and settings -->
   <dialog id="tokenModal" class="modal glass sm">
     <form method="dialog" id="tokenForm" class="token-form">
       <div class="modal-header">
@@ -241,7 +258,7 @@
     </div>
   </dialog>
 
-  <!-- Footer now only at page bottom (not fixed) -->
+  <!-- Footer -->
   <footer class="app-footer">
     <button id="creditLink" class="flip" aria-label="Credits" aria-pressed="false" aria-expanded="false">
       <span class="flip-inner">
