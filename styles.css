@@ -159,9 +159,10 @@ body{
   border:none;
   padding:0;
   position: relative;
-  overflow: hidden;
+  overflow: auto; /* allow scroll so title/body aren't hidden by tall images */
   border-radius: 16px;
   animation: modalIn .22s ease both;
+  max-height: 86vh; /* keep within viewport */
 }
 .modal.sm{ width: min(520px, 92vw); }
 @keyframes modalIn{ from{ transform: translateY(6px) scale(.985); opacity: 0 } to{ transform: translateY(0) scale(1); opacity: 1 } }
@@ -198,12 +199,19 @@ body{
 /* Modal sections */
 .modal-header{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding:12px 12px 6px;
+  padding:12px 14px 6px;
 }
 .modal-header h3{ margin:0; font-size:16px; letter-spacing:.2px; }
+.modal-header.sticky{
+  position: sticky; top: 0; z-index: 5;
+  background: linear-gradient(180deg, color-mix(in srgb, #ffffff 70%, transparent), transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid color-mix(in srgb, var(--txt) 8%, transparent);
+}
 .modal-body{ padding: 2px 12px 8px; }
 .modal-footer{
-  display:flex; gap:10px; justify-content:flex-end; padding: 0 12px 12px;
+  display:flex; gap:10px; justify-content:flex-end; padding: 0 14px 14px;
 }
 .modal-hint{ padding: 0 12px 12px; }
 
@@ -232,7 +240,7 @@ body{
 .modal .modal-close:active{ transform: translateY(1px) scale(0.98); }
 
 /* Layout */
-.container{ position:relative; z-index:1; padding: 16px 12px 90px; max-width: 940px; margin: 0 auto; }
+.container{ position:relative; z-index:1; padding: 16px 12px 32px; max-width: 940px; margin: 0 auto; } /* reduce bottom padding since footer isn't fixed */
 
 .tabs{
   display:flex; gap:8px; padding:6px; margin: 6px auto 14px; width: fit-content;
@@ -420,6 +428,44 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
 .cal-legend .dot.today{ background: color-mix(in srgb, var(--aqua) 55%, #ffffff 25%); }
 .cal-legend .dot.selected{ background: color-mix(in srgb, var(--pink) 55%, #ffffff 25%); }
 
+/* Reader content and gallery */
+.modal .reader-body{
+  padding: 6px 14px 8px; white-space: pre-wrap; line-height: 1.65;
+  color: var(--txt);
+}
+.gallery{
+  padding: 0 14px 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 8px;
+}
+@media (min-width:700px){
+  .gallery{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+.gallery img{
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  image-orientation: from-image;
+  max-height: 240px; /* prevent a single image from consuming the whole modal */
+}
+
+/* Uploader previews */
+.image-controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.image-previews{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.image-previews .thumb{
+  position:relative; width:88px; height:88px; border-radius:12px; overflow:hidden;
+  border: 1px solid var(--stroke); background: #0001;
+}
+.image-previews .thumb img{ width:100%; height:100%; object-fit:cover; display:block; image-orientation: from-image; }
+.image-previews .thumb button.remove{
+  position:absolute; top:4px; right:4px; width:22px; height:22px;
+  border:none; border-radius:999px; background: rgba(0,0,0,0.55); color:#fff; cursor:pointer;
+}
+
 /* Streak chip */
 .streak-wrap{ margin: 0 0 6px; }
 .streak-chip{
@@ -434,12 +480,14 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
 
 /* Flip credit — improved UX + fixed width */
 .app-footer{
-  position:fixed; bottom:0; left:0; right:0; z-index:10;
+  /* Now only at page bottom; not fixed */
+  position: static;
   display:flex; align-items:center; justify-content:center; gap:8px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  padding: 12px;
+  margin-top: 24px;
   color: var(--muted); font-size:12px; opacity:0.95;
   background: var(--footer-grad);
-  backdrop-filter: blur(4px);
+  border-top-left-radius: 12px; border-top-right-radius: 12px;
 }
 .flip{
   display:inline-block; perspective: 900px; cursor: pointer; user-select: none;
@@ -464,19 +512,6 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
   background: color-mix(in srgb, #ffffff 35%, transparent);
 }
 
-/* Uploader previews */
-.image-controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.image-previews{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
-.image-previews .thumb{
-  position:relative; width:88px; height:88px; border-radius:12px; overflow:hidden;
-  border: 1px solid var(--stroke); background: #0001;
-}
-.image-previews .thumb img{ width:100%; height:100%; object-fit:cover; display:block; image-orientation: from-image; }
-.image-previews .thumb button.remove{
-  position:absolute; top:4px; right:4px; width:22px; height:22px;
-  border:none; border-radius:999px; background: rgba(0,0,0,0.55); color:#fff; cursor:pointer;
-}
-
 /* Misc */
 .gentle{ margin:10px 0; }
 .gentle summary{ cursor:pointer; color: var(--muted); }
@@ -487,7 +522,7 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
 .reader-body p{ margin: 0 0 12px; }
 
 /* Masonry */
-.masonry{ column-count: 1; column-gap: 12px; padding-bottom: 80px; }
+.masonry{ column-count: 1; column-gap: 12px; padding-bottom: 16px; }
 @media (min-width:520px){ .masonry{ column-count: 2; } }
 @media (min-width:900px){ .masonry{ column-count: 3; } }
 

@@ -125,7 +125,11 @@ async function getEmailsFile(){
 async function putFile(path, contentB64, message='chore: add file ðŸ“„'){
   const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
   const body = { message, content: contentB64, branch: BRANCH };
-  const res = await fetch(url, { method:'PUT', headers:{ ...API_HEADERS(magicToken), 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+  const res = await fetch(url, {
+    method:'PUT',
+    headers:{ ...API_HEADERS(magicToken), 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
   if (!res.ok){ const t = await res.text(); throw new Error(`Upload failed: ${res.status} ${t}`); }
   return res.json();
 }
@@ -134,7 +138,11 @@ async function putEmailsFile(nextEmails, message='chore: add a magical letter ðŸ
   const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${encodeURI(FILE_PATH)}`;
   const body = { message, content: encode64(JSON.stringify(nextEmails,null,2)), branch: BRANCH };
   if (currentSha) body.sha = currentSha;
-  const res = await fetch(url, { method:'PUT', headers:{ ...API_HEADERS(magicToken), 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+  const res = await fetch(url, {
+    method:'PUT',
+    headers:{ ...API_HEADERS(magicToken), 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
   if (!res.ok){ const t = await res.text(); throw new Error(`The stars hesitated: ${res.status} ${t}`); }
   const json = await res.json();
   currentSha = json.content?.sha || currentSha;
@@ -477,7 +485,6 @@ function populateMonthYearPickers(){
   MONTHS.forEach((name, idx)=>{
     const opt = document.createElement('option');
     opt.value = String(idx); opt.textContent = name;
-    // Disable months before Sep 2025 if that year is selected
     if (calYear === MIN_CAL_YEAR && idx < MIN_CAL_MONTH) opt.disabled = true;
     monthSel.appendChild(opt);
   });
@@ -502,13 +509,11 @@ function renderCalendar(){
   titleEl.textContent = `${MONTHS[calMonth]} ${calYear}`;
   populateMonthYearPickers();
 
-  // Prev disabled at min month
   const atMinMonth = (calYear===MIN_CAL_YEAR && calMonth===MIN_CAL_MONTH);
   if (prevBtn){ prevBtn.disabled = atMinMonth; prevBtn.setAttribute('aria-disabled', atMinMonth ? 'true' : 'false'); }
 
   grid.innerHTML = '';
 
-  // Weekday header
   const weekdayNames = Array.from({ length:7 }, (_,i)=> new Date(1970,0,4+i).toLocaleDateString([], { weekday:'short' }));
   for (const name of weekdayNames){
     const h = document.createElement('div'); h.className='cal-cell'; h.textContent=name; h.setAttribute('role','columnheader'); grid.appendChild(h);
@@ -730,8 +735,6 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if (isBeforeMinMonth(d.getFullYear(), d.getMonth())) d = new Date(MIN_CAL_YEAR, MIN_CAL_MONTH, 1);
     setCalendarTo(d); renderCalendar(); positionDropdown();
   });
-
-  // Footer credit flip improvements already set in setupCreditFlip
 
   // Service worker update flow
   setupUpdateFlow();
