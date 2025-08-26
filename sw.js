@@ -1,4 +1,4 @@
-const CACHE = 'aurora-mailbox-v1.6';
+const CACHE = 'aurora-mailbox-v1.7';
 const ASSETS = [
   './',
   './index.html',

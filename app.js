@@ -159,20 +159,12 @@ async function getEmailsFile() {
 }
 
 // GitHub Contents API: put file (JSON or binary)
-// contentB64 must be base64 without data: prefix
 async function putFile(path, contentB64, message = 'chore: add file 📄') {
   const url = `${GH_API}/repos/${OWNER}/${REPO}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
-  const body = {
-    message,
-    content: contentB64,
-    branch: BRANCH,
-  };
+  const body = { message, content: contentB64, branch: BRANCH };
   const res = await fetch(url, {
     method: 'PUT',
-    headers: {
-      ...API_HEADERS(magicToken),
-      'Content-Type': 'application/json',
-    },
+    headers: { ...API_HEADERS(magicToken), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -194,10 +186,7 @@ async function putEmailsFile(nextEmails, message = 'chore: add a magical letter 
 
   const res = await fetch(url, {
     method: 'PUT',
-    headers: {
-      ...API_HEADERS(magicToken),
-      'Content-Type': 'application/json',
-    },
+    headers: { ...API_HEADERS(magicToken), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
@@ -297,10 +286,8 @@ async function getObjectUrlForPath(path) {
 
 // Robust loader: accepts either a repo-relative path ("data/images/...") or a raw URL
 function loadImageIntoElement(imgEl, stored) {
-  // Clean previous handlers
   imgEl.onerror = null;
 
-  // If a full URL was stored (older entries), try it first then fall back
   if (typeof stored === 'string' && /^https?:\/\//.test(stored)) {
     imgEl.src = stored;
     imgEl.onerror = async () => {
@@ -314,12 +301,9 @@ function loadImageIntoElement(imgEl, stored) {
     return;
   }
 
-  // Otherwise assume we stored a repo path; try raw first (works for public repos),
-  // then fall back to authenticated API fetch for private repos or CDN lag
   const path = String(stored || '').replace(/^\/+/, '');
   if (!path) return;
 
-  // Try raw (fast path if repo is public and CDN has the file)
   imgEl.src = rawUrl(path);
   imgEl.onerror = async () => {
     try {
@@ -372,7 +356,6 @@ function renderInbox() {
       </div>`;
     return;
   }
-  // Show most recent first
   const list = [...listToRender].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   const tpl = $('#cardTemplate');
 
@@ -389,7 +372,6 @@ function renderInbox() {
     $('.date', node).textContent = datePretty(e.createdAt || new Date().toISOString());
     $('.read-btn', node).addEventListener('click', () => openReader(e));
     grid.appendChild(node);
-    // sprinkle pastel accents
     const hues = ['#ffd9f2', '#e3d5ff', '#caffff', '#ffe7c2'];
     const pick = hues[idx % hues.length];
     card.style.border = '1px solid rgba(255,255,255,0.35)';
@@ -399,11 +381,10 @@ function renderInbox() {
 
 async function refreshInbox() {
   const status = $('#inboxStatus');
-  // If offline, render whatever we have cached and inform the user
   if (!navigator.onLine) {
     sparkleStatus(status, 'You are offline. Showing cached letters (if any).');
     renderInbox();
-    renderCalendar(); // still show using cached emails if present
+    renderCalendar();
     updateStreakChip();
     return;
   }
@@ -425,7 +406,6 @@ function openReader(email) {
   $('#readerTitle').textContent = email.title || '(Untitled)';
   $('#readerBody').textContent = email.body || '';
 
-  // render gallery
   const gallery = $('#readerGallery');
   gallery.innerHTML = '';
   if (Array.isArray(email.images) && email.images.length) {
@@ -482,7 +462,6 @@ async function deleteCurrent() {
 }
 
 function sparkleTrail() {
-  // Tiny ephemeral sparkle effect near the send button
   const btn = $('#sendBtn');
   if (!btn) return;
   const burst = document.createElement('span');
@@ -510,13 +489,13 @@ function ensureOfflineModal() {
 
   dlg = document.createElement('dialog');
   dlg.id = 'offlineModal';
-  dlg.className = 'modal glass';
+  dlg.className = 'modal glass sm';
   dlg.innerHTML = `
     <div class="modal-header">
       <h3>You're offline</h3>
-      <button id="closeOffline" class="icon-btn" aria-label="Close">✖️</button>
+      <button id="closeOffline" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
     </div>
-    <article class="reader-body">
+    <article class="reader-body modal-body">
       <p>No internet connection detected.</p>
       <p>Sending letters and adding photos are disabled until you're back online.</p>
     </article>
@@ -553,7 +532,6 @@ function closeOfflineModal() {
   if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
 }
 function updateOnlineUI(isOnline) {
-  // Disable sending and adding photos when offline
   $('#sendBtn')?.toggleAttribute('disabled', !isOnline);
   $('#addPhotosBtn')?.toggleAttribute('disabled', !isOnline);
   $('#imageInput')?.toggleAttribute('disabled', !isOnline);
@@ -603,7 +581,6 @@ async function onSend() {
     images: [],
   };
 
-  // Upload photos (if any)
   if (selectedImages.length) {
     try {
       sparkleStatus(status, `Uploading ${selectedImages.length} photo(s)…`);
@@ -617,7 +594,6 @@ async function onSend() {
         const namePart = `${Date.now()}-${idx}.jpg`;
         const path = `${IMAGES_DIR}/${newEmail.id}/${namePart}`;
         await putFile(path, b64, `feat: add photo for entry ${newEmail.id} 📷`);
-        // Store the repo-relative path; we’ll resolve to a displayable URL at render time.
         uploaded.push(path);
       }
       newEmail.images = uploaded;
@@ -639,12 +615,10 @@ async function onSend() {
     updateStreakChip();
     sparkleStatus(status, 'Your letter is shining in the night sky ✨');
     sparkleTrail();
-    // reset form
     $('#mailTitle').value = '';
     $('#mailBody').value = '';
     clearSelectedImages();
 
-    // switch to inbox
     $$('[data-tab]').forEach(b => b.classList.remove('active'));
     $$('[data-tab="inbox"]')[0].classList.add('active');
     $$('.panel').forEach(p => p.classList.remove('active'));
@@ -704,7 +678,6 @@ function clearSelectedImages() {
 function openTokenModal(force = false) {
   const dlg = $('#tokenModal');
   if (force || !magicToken || !displayName) {
-    // prefill name if we have it; never prefill token for safety
     const nameEl = $('#nameInput');
     if (nameEl && displayName) nameEl.value = displayName;
     if (typeof dlg.showModal === 'function') dlg.showModal();
@@ -735,7 +708,7 @@ function setupSettings() {
   });
 }
 
-// Update flow (show a magical popup when a new version is available)
+// Update flow
 function setupUpdateFlow() {
   if (!('serviceWorker' in navigator)) return;
 
@@ -781,8 +754,6 @@ function showUpdateModal(reg) {
 }
 
 /* ---------- Calendar rendering and streak ---------- */
-
-// Build a Set of local date keys that have at least one entry
 function buildEntryDateSet() {
   const set = new Set();
   for (const e of emails) {
@@ -803,13 +774,10 @@ function renderCalendar() {
   const clearBtn = $('#clearFilterBtn');
   if (!titleEl || !grid) return;
 
-  // Title
   titleEl.textContent = `${MONTHS[calMonth]} ${calYear}`;
 
-  // Clear grid
   grid.innerHTML = '';
 
-  // Weekday header (Sun..Sat)
   const weekdayNames = Array.from({ length: 7 }, (_, i) =>
     new Date(1970, 0, 4 + i).toLocaleDateString([], { weekday: 'short' })
   );
@@ -822,14 +790,12 @@ function renderCalendar() {
   }
 
   const firstOfMonth = new Date(calYear, calMonth, 1);
-  const startDow = firstOfMonth.getDay(); // 0..6 (Sun..Sat)
-  // Start from the Sunday of the week containing the 1st
+  const startDow = firstOfMonth.getDay();
   const gridStart = addDays(firstOfMonth, -startDow);
 
   const todayKey = dateKeyFromDate(new Date());
   const entryDays = buildEntryDateSet();
 
-  // 6 weeks x 7 days = 42 cells
   for (let i = 0; i < 42; i++) {
     const d = addDays(gridStart, i);
     const isOtherMonth = d.getMonth() !== calMonth;
@@ -847,13 +813,10 @@ function renderCalendar() {
     cell.dataset.key = key;
 
     cell.addEventListener('click', () => {
-      // If clicking a day from an adjacent month, jump calendar to that month
       if (isOtherMonth) {
         setCalendarTo(d);
-        // Apply filter to the clicked date too
         setDateFilter(key);
       } else {
-        // Toggle selection for same-day click
         if (activeFilterDateKey === key) {
           setDateFilter(null);
         } else {
@@ -865,16 +828,12 @@ function renderCalendar() {
     grid.appendChild(cell);
   }
 
-  // Clear filter button visibility
   clearBtn?.toggleAttribute('hidden', !activeFilterDateKey);
 }
 
-// Apply or clear date filter
 function setDateFilter(dateKeyOrNull) {
   activeFilterDateKey = dateKeyOrNull;
-  // Render inbox with filter
   renderInbox();
-  // Update status
   const status = $('#inboxStatus');
   if (activeFilterDateKey) {
     const dt = new Date(activeFilterDateKey);
@@ -883,11 +842,9 @@ function setDateFilter(dateKeyOrNull) {
   } else {
     sparkleStatus(status, `Showing ${emails.length} letters ✨`);
   }
-  // Re-render calendar to reflect selection
   renderCalendar();
 }
 
-// Compute and update streak chip on home screen
 function updateStreakChip() {
   const chip = $('#streakChip');
   if (!chip) return;
@@ -899,9 +856,7 @@ function updateStreakChip() {
 
   const entryDays = buildEntryDateSet();
   const today = new Date();
-  const todayKey = dateKeyFromDate(today);
 
-  // Current streak anchored to today
   let streak = 0;
   let cursor = new Date(today);
   while (entryDays.has(dateKeyFromDate(cursor))) {
@@ -909,7 +864,6 @@ function updateStreakChip() {
     cursor = addDays(cursor, -1);
   }
 
-  // If no entry today, consider streak 0 (anchored to today)
   if (streak === 0) {
     chip.hidden = true;
     return;
@@ -921,17 +875,14 @@ function updateStreakChip() {
 
 /* ---------- Init ---------- */
 window.addEventListener('DOMContentLoaded', () => {
-  // Gentle 1s loader fade
   const loader = $('#loadingScreen');
   setTimeout(() => loader?.classList.add('hide'), 1000);
 
-  // Token + Name
   const rememberedToken = loadToken();
   const rememberedName = loadName();
   if (rememberedToken) magicToken = rememberedToken;
   if (rememberedName) displayName = rememberedName;
 
-  // Events
   setupTabs();
   setupSettings();
 
@@ -940,6 +891,12 @@ window.addEventListener('DOMContentLoaded', () => {
   if (!rememberedToken || !rememberedName) {
     openTokenModal(false);
   }
+
+  // Token modal close via X
+  $('#closeToken')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeTokenModal();
+  });
 
   // Image picker events
   $('#addPhotosBtn')?.addEventListener('click', () => {
@@ -952,7 +909,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const onlyImages = files.filter(f => f.type.startsWith('image/'));
     selectedImages.push(...onlyImages);
     updateImagePreviews();
-    // reset input so selecting same files again triggers change
     e.target.value = '';
   });
 
@@ -1021,8 +977,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setupUpdateFlow();
 
   // Offline/online handling
-  ensureOfflineModal(); // prepare the dialog in DOM
-  handleConnectivityChange(); // set initial state
+  ensureOfflineModal();
+  handleConnectivityChange();
   window.addEventListener('online', handleConnectivityChange);
   window.addEventListener('offline', handleConnectivityChange);
 

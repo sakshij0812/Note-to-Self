@@ -87,7 +87,7 @@
           <textarea id="mailBody" rows="8" class="diary-text" placeholder="Pour your heart out with glitter and grace..."></textarea>
         </label>
 
-        <!-- New: Photos uploader -->
+        <!-- Photos uploader -->
         <div class="field">
           <span>Photos</span>
           <div class="image-controls">
@@ -117,7 +117,7 @@
         <span id="inboxStatus" class="status"></span>
       </div>
 
-      <!-- New: Calendar card -->
+      <!-- Calendar card -->
       <div class="card glass calendar-card" aria-label="Writing calendar">
         <div class="cal-header">
           <button id="calPrev" class="icon-btn" aria-label="Previous month">◀</button>
@@ -151,13 +151,13 @@
     </section>
   </main>
 
+  <!-- Reader: keep default size -->
   <dialog id="readerModal" class="modal glass">
     <div class="modal-header">
       <h3 id="readerTitle">Title</h3>
-      <button id="closeReader" class="icon-btn" aria-label="Close">✖️</button>
+      <button id="closeReader" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
     </div>
     <article id="readerBody" class="reader-body diary-text"></article>
-    <!-- New: image gallery for the entry -->
     <div id="readerGallery" class="gallery"></div>
     <div class="modal-footer">
       <button id="deleteBtn" class="btn danger">Delete</button>
@@ -165,39 +165,45 @@
     </div>
   </dialog>
 
-  <dialog id="tokenModal" class="modal glass">
+  <!-- Smaller, cleaner popups -->
+  <dialog id="tokenModal" class="modal glass sm">
     <form method="dialog" id="tokenForm" class="token-form">
-      <h3>Welcome to Reflections ✨</h3>
-      <p class="soft">To let your letters float among the stars, whisper your name and Magic Key (GitHub token) below.</p>
-      <label class="field">
-        <span>Your Name</span>
-        <input id="nameInput" type="text" placeholder="e.g., Sakshi" autocomplete="off" />
-      </label>
-      <label class="field">
-        <span>Magic Key</span>
-        <input id="tokenInput" type="password" placeholder="ghp_..." autocomplete="off" />
-      </label>
-      <details class="gentle">
-        <summary>How to conjure a Magic Key</summary>
-        <ol class="steps">
-          <li>GitHub → Settings → Developer settings → Personal access tokens → Fine‑grained tokens.</li>
-          <li>Select your repo; grant Repository → Contents: Read and write.</li>
-          <li>Copy the token (ghp_ / github_pat_…). Keep it secret.</li>
-        </ol>
-      </details>
-      <div class="actions">
+      <div class="modal-header">
+        <h3>Welcome to Reflections ✨</h3>
+        <button type="button" class="icon-btn modal-close" aria-label="Close" id="closeToken" title="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="soft">To let your letters float among the stars, whisper your name and Magic Key (GitHub token) below.</p>
+        <label class="field">
+          <span>Your Name</span>
+          <input id="nameInput" type="text" placeholder="e.g., Sakshi" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Magic Key</span>
+          <input id="tokenInput" type="password" placeholder="ghp_..." autocomplete="off" />
+        </label>
+        <details class="gentle">
+          <summary>How to conjure a Magic Key</summary>
+          <ol class="steps">
+            <li>GitHub → Settings → Developer settings → Personal access tokens → Fine‑grained tokens.</li>
+            <li>Select your repo; grant Repository → Contents: Read and write.</li>
+            <li>Copy the token (ghp_ / github_pat_…). Keep it secret.</li>
+          </ol>
+        </details>
+      </div>
+      <div class="modal-footer">
         <button class="btn primary" id="saveTokenBtn">Begin the magic ✨</button>
       </div>
-      <p class="hint">Your name and Magic Key are saved only on this device. You can remove them anytime in Settings.</p>
+      <p class="hint modal-hint">Your name and Magic Key are saved only on this device. You can remove them anytime in Settings.</p>
     </form>
   </dialog>
 
-  <dialog id="settingsModal" class="modal glass">
+  <dialog id="settingsModal" class="modal glass sm">
     <div class="modal-header">
       <h3>Magic Key ✨</h3>
-      <button id="closeSettings" class="icon-btn" aria-label="Close">✖️</button>
+      <button id="closeSettings" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
     </div>
-    <div class="settings-body" style="padding: 0 14px 14px;">
+    <div class="settings-body modal-body">
       <p class="soft">Manage your secret Magic Key (GitHub token) here.</p>
       <div class="sep"></div>
       <div class="grid2">
@@ -208,12 +214,12 @@
     </div>
   </dialog>
 
-  <dialog id="updateModal" class="modal glass">
+  <dialog id="updateModal" class="modal glass sm">
     <div class="modal-header">
-      <h3>A dawn awaits</h3>
-      <button id="closeUpdate" class="icon-btn" aria-label="Close">✖️</button>
+      <h3>Fresh Starlight Awaits ✨</h3>
+      <button id="closeUpdate" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
     </div>
-    <article class="reader-body">
+    <article class="reader-body modal-body">
       <p>A new sprinkle of Reflections magic is ready. Update now or later?</p>
     </article>
     <div class="modal-footer">
