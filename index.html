@@ -28,32 +28,9 @@
   <link rel="stylesheet" href="overrides.css" />
 </head>
 <body>
-  <!-- 1s loading — sparkly burst -->
+  <!-- Clean 1s loading — a single ✨ gliding across the screen -->
   <div id="loadingScreen" class="loading-screen" aria-hidden="true">
-    <div class="stardust-burst" role="img" aria-label="Loading">
-      <span class="dust" style="--tx:-50px;--ty:-10px;--d:0ms;"></span>
-      <span class="dust" style="--tx:-36px;--ty:-34px;--d:20ms;"></span>
-      <span class="dust" style="--tx: 28px;--ty:-26px;--d:40ms;"></span>
-      <span class="dust" style="--tx: 46px;--ty:-12px;--d:60ms;"></span>
-      <span class="dust" style="--tx: 18px;--ty:  8px;--d:80ms;"></span>
-      <span class="dust" style="--tx:-22px;--ty: 14px;--d:100ms;"></span>
-      <span class="dust" style="--tx:-36px;--ty: 30px;--d:120ms;"></span>
-      <span class="dust" style="--tx: 12px;--ty: 38px;--d:140ms;"></span>
-      <span class="dust" style="--tx: 32px;--ty: 22px;--d:160ms;"></span>
-      <span class="dust" style="--tx:-12px;--ty:-22px;--d:180ms;"></span>
-      <span class="dust" style="--tx:  8px;--ty:-42px;--d:200ms;"></span>
-      <span class="dust" style="--tx: -8px;--ty: 42px;--d:220ms;"></span>
-      <span class="dust" style="--tx: 48px;--ty:  8px;--d:240ms;"></span>
-      <span class="dust" style="--tx:-48px;--ty: -2px;--d:260ms;"></span>
-      <span class="dust" style="--tx:  0px;--ty: 48px;--d:280ms;"></span>
-      <span class="dust" style="--tx:  0px;--ty:-48px;--d:300ms;"></span>
-      <span class="dust sm" style="--tx:-20px;--ty:-12px;--d:60ms;"></span>
-      <span class="dust sm" style="--tx: 24px;--ty: 16px;--d:110ms;"></span>
-      <span class="dust sm" style="--tx:-16px;--ty: 24px;--d:150ms;"></span>
-      <span class="dust sm" style="--tx: 18px;--ty:-20px;--d:190ms;"></span>
-      <span class="dust sm" style="--tx:-26px;--ty:  6px;--d:230ms;"></span>
-      <span class="dust sm" style="--tx: 10px;--ty: -8px;--d:270ms;"></span>
-    </div>
+    <span class="sparkle-mover" role="img" aria-label="Loading">✨</span>
   </div>
 
   <!-- Dreamy background -->
@@ -65,16 +42,6 @@
     <span class="sprinkles s1"></span>
     <span class="sprinkles s2"></span>
   </div>
-
-  <header class="app-header">
-    <div class="brand glass">
-      <div class="brand-mark">✿</div>
-      <div class="brand-text">
-        <h1>Reflections</h1>
-        <p>Write softly. Glow brightly.</p>
-      </div>
-    </div>
-  </header>
 
   <main class="container">
     <nav class="tabs glass">
@@ -167,7 +134,6 @@
       <div id="inboxGrid" class="masonry"></div>
       <template id="cardTemplate">
         <article class="note-card paper card">
-          <!-- star icon removed for a cleaner header -->
           <img class="note-thumb" alt="" hidden loading="lazy" />
           <h3 class="note-title"></h3>
           <p class="note-preview diary-text"></p>

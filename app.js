@@ -1,3 +1,7 @@
+// Hardcoded constellation (change in code if you like)
+/* Ensure the repo exists and your token has:
+   - Repository permissions → Contents: Read and write
+*/
 const OWNER = 'sakshij0812';
 const REPO = 'Note-to-Self-Data';
 const BRANCH = 'main';
@@ -320,7 +324,7 @@ function sparkleTrail(){
   const btn = $('#sendBtn'); if (!btn) return;
   const burst = document.createElement('span'); burst.className='burst'; burst.innerHTML='✨';
   const rect = btn.getBoundingClientRect();
-  Object.assign(burst.style,{ position:'fixed', left:`${rect.left+rect.width/2}px`, top:`${rect.top}px`, pointerEvents:'none', animation:'burst 800ms ease forwards' });
+  Object.assign(burst.style,{ position:'fixed', left:`${rect.left+rect.width/2}px`, top:`${rect.top}px`, pointerEvents:'none', animation:'burst 800ms ease forwards', zIndex: 1000 });
   document.body.appendChild(burst); setTimeout(()=>burst.remove(), 900);
 }
 const style = document.createElement('style');
@@ -657,23 +661,11 @@ function setupCreditFlip(){
   btn.addEventListener('click', (e)=>{ e.preventDefault(); toggle(); });
   btn.addEventListener('keydown', (ev)=>{ if (ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); toggle(); } });
 
-  // Auto unflip after a moment
   btn.addEventListener('transitionend', ()=>{
     if (btn.classList.contains('flipped')){
       setTimeout(()=>{ btn.classList.remove('flipped'); btn.setAttribute('aria-pressed','false'); btn.setAttribute('aria-expanded','false'); }, 2200);
     }
   });
-}
-
-/* ---------- Brand float on scroll ---------- */
-function setupBrandFloat(){
-  const THRESHOLD = 40;
-  const apply = ()=>{
-    if (window.scrollY > THRESHOLD) document.body.classList.add('brand-floating');
-    else document.body.classList.remove('brand-floating');
-  };
-  apply();
-  window.addEventListener('scroll', apply, { passive: true });
 }
 
 /* ---------- Init ---------- */
@@ -687,7 +679,6 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if (rememberedName) displayName = rememberedName;
 
   setupTabs(); setupCreditFlip(); setupSettings(); updateGreeting();
-  setupBrandFloat();
 
   if (!rememberedToken || !rememberedName) openTokenModal(false);
 
@@ -752,7 +743,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   window.addEventListener('online', handleConnectivityChange);
   window.addEventListener('offline', handleConnectivityChange);
 
-  // Initial calendar state & streak (dropdown closed by default)
+  // Initial calendar state & streak
   setCalendarTo(MIN_CAL_DATE);
   renderCalendar();
   updateStreakChip();
