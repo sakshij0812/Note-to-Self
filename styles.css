@@ -240,7 +240,7 @@ body{
 .modal .modal-close:active{ transform: translateY(1px) scale(0.98); }
 
 /* Layout */
-.container{ position:relative; z-index:1; padding: 16px 12px 32px; max-width: 940px; margin: 0 auto; }
+.container{ position:relative; z-index:1; padding: 16px 12px 32px; max-width: 940px; margin: 0 auto; } /* reduce bottom padding since footer isn't fixed */
 
 .tabs{
   display:flex; gap:8px; padding:6px; margin: 6px auto 14px; width: fit-content;

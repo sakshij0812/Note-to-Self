@@ -33,9 +33,6 @@ let calMonth = MIN_CAL_MONTH;
 let activeFilterDateKey = null; // 'YYYY-MM-DD'
 let calendarOpen = false;
 
-// Track connectivity to flash "Back online" only when returning from offline
-let lastOnline = navigator.onLine;
-
 // Helpers
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -217,54 +214,19 @@ function loadImageIntoElement(imgEl, stored){
 /* ---------- UI wiring ---------- */
 function setupTabs(){
   const tabs = $$('.tab');
-  const panels = $$('.panel');
-
-  const activate = (target) => {
-    // deactivate all
-    tabs.forEach(b => b.classList.remove('active'));
-    panels.forEach(p => p.classList.remove('active'));
-
-    // activate target
-    if (target === 'compose') {
-      $('#composePanel')?.classList.add('active');
-      tabs.find(b => b.dataset.tab === 'compose')?.classList.add('active');
-      updateGreeting();
-      // Close dropdown to avoid overlay issues
-      closeCalendarDropdown();
-    } else if (target === 'inbox') {
-      $('#inboxPanel')?.classList.add('active');
-      tabs.find(b => b.dataset.tab === 'inbox')?.classList.add('active');
-      try { refreshInbox(); } catch (e) { console.error('refreshInbox failed:', e); }
-      // Also ensure dropdown positioning is reset
-      closeCalendarDropdown();
-    }
-  };
-
-  tabs.forEach(btn => {
-    btn.addEventListener('click', (ev) => {
-      ev.preventDefault();
+  tabs.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabs.forEach(b=>b.classList.remove('active')); btn.classList.add('active');
       const tab = btn.getAttribute('data-tab');
-      if (!tab) return;
-      activate(tab);
+      $$('.panel').forEach(p=>p.classList.remove('active'));
+      if (tab === 'compose'){ $('#composePanel').classList.add('active'); updateGreeting(); closeCalendarDropdown(); }
+      else { $('#inboxPanel').classList.add('active'); refreshInbox(); }
     });
   });
-
-  // Ensure a sane initial state
-  activate('compose');
 }
 
-function sparkleStatus(el, msg, kind='info'){ if (!el) return; el.textContent = msg; el.style.color = kind === 'error' ? '#ffb8c8' : '#ffd7ff'; }
-function flashStatus(el, msg, kind='info', duration=2500){
-  if (!el) return;
-  sparkleStatus(el, msg, kind);
-  const token = Symbol();
-  el._flashToken = token;
-  setTimeout(() => {
-    if (el._flashToken === token) el.textContent = '';
-  }, duration);
-}
+function sparkleStatus(el, msg, kind='info'){ el.textContent = msg; el.style.color = kind === 'error' ? '#ffb8c8' : '#ffd7ff'; }
 
-// Filtered list for inbox
 function getDisplayEmails(){
   if (!activeFilterDateKey) return emails;
   return emails.filter(e => dateKeyFromISO(e.createdAt || new Date().toISOString()) === activeFilterDateKey);
@@ -300,7 +262,7 @@ function renderInbox(){
     $('.note-title', node).textContent = e.title || '(Untitled)';
     $('.note-preview', node).textContent = (e.body || '').slice(0, 200);
     $('.date', node).textContent = datePretty(e.createdAt || new Date().toISOString());
-    $('.read-btn', node).addEventListener('click', () => openReader(e));
+    $('.read-btn', node).addEventListener('click', ()=>openReader(e));
     grid.appendChild(node);
     const hues = ['#ffd9f2', '#e3d5ff', '#caffff', '#ffe7c2']; const pick = hues[idx % hues.length];
     card.style.border = '1px solid rgba(255,255,255,0.35)';
@@ -339,207 +301,12 @@ function closeReader(){
   if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
   openedId = null;
 }
-
-/* ---------- Share: generate Aurora-style image ---------- */
-async function generateShareImage(entry){
-  const W = 1080, H = 1350; // portrait
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // Ensure web fonts (if any) are loaded before measuring
-  if (document.fonts && document.fonts.ready) {
-    try { await document.fonts.ready; } catch {}
-  }
-
-  // Background gradient (deep night)
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#0d0a14');
-  bg.addColorStop(1, '#0a1524');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  // Aurora blobs using "screen" composition
-  ctx.globalCompositeOperation = 'screen';
-  function blob(cx, cy, r, color, alpha=0.55){
-    const grd = ctx.createRadialGradient(cx, cy, r*0.1, cx, cy, r);
-    grd.addColorStop(0, color);
-    grd.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  blob(W*0.25, H*0.25, W*0.45, 'rgba(246,167,217,1)'); // pink
-  blob(W*0.75, H*0.20, W*0.55, 'rgba(169,139,255,1)'); // lavender
-  blob(W*0.35, H*0.75, W*0.65, 'rgba(110,231,231,1)'); // aqua
-  ctx.globalCompositeOperation = 'source-over';
-
-  // Subtle stars
-  function star(x,y,r,alpha){
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-    ctx.restore();
-  }
-  for (let i=0;i<90;i++){
-    star(Math.random()*W, Math.random()*H*0.8, Math.random()*1.6+0.4, Math.random()*0.7+0.3);
-  }
-
-  // Panel overlay for text (soft glass)
-  const panelMargin = 64;
-  const panelRadius = 28;
-  const panelWidth = W - panelMargin*2;
-  const panelTop = 180;
-  const panelBottomMargin = 80;
-
-  // Rounded rectangle path
-  function roundRectPath(x,y,w,h,r){
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
-  }
-
-  // Glassy panel
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-  ctx.lineWidth = 2;
-  roundRectPath(panelMargin, panelTop, panelWidth, H - panelTop - panelBottomMargin, panelRadius);
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
-
-  // Title "Reflection"
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,0.95)';
-  ctx.shadowColor = 'rgba(0,0,0,0.35)';
-  ctx.shadowBlur = 8;
-  ctx.font = '800 64px Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-  ctx.textBaseline = 'top';
-  const titleX = panelMargin + 32;
-  const titleY = panelTop + 28;
-  ctx.fillText('Reflection', titleX, titleY);
-
-  // Optional entry title (as subtitle)
-  const subtitle = (entry.title || '').trim();
-  let contentY = titleY + 64 + 22;
-  if (subtitle){
-    ctx.font = '700 36px Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    wrapText(ctx, subtitle, titleX, contentY, panelWidth - 64, 44, 2); // up to 2 lines
-    contentY += 44 * Math.min(2, estimateLineCount(ctx, subtitle, panelWidth - 64));
-    contentY += 8;
-  }
-
-  // Body
-  ctx.font = '500 30px Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  const maxTextWidth = panelWidth - 64;
-  const maxBodyLines = 18;
-  wrapText(ctx, (entry.body || '').trim(), titleX, contentY, maxTextWidth, 40, maxBodyLines);
-
-  // Footer mark (date)
-  const footerText = new Date(entry.createdAt || Date.now()).toLocaleString([], { dateStyle:'medium' });
-  ctx.font = '700 22px Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(footerText, titleX, H - panelBottomMargin - 24);
-  ctx.restore();
-
-  // Export
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
-  return blob || (await (async()=>{ const dataUrl = canvas.toDataURL('image/png'); const bin = atob(dataUrl.split(',')[1]); const arr = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i); return new Blob([arr], { type:'image/png' }); })());
+function shareCurrent(){
+  if (!openedId) return; const e = emails.find(x=>x.id===openedId); if (!e) return;
+  const text = `💌 ${e.title}\n\n${e.body}`;
+  if (navigator.share){ navigator.share({ title: e.title || 'Reflections', text }); }
+  else { navigator.clipboard.writeText(text); alert('Copied to clipboard ✨'); }
 }
-
-// Text wrapping helpers
-function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines = Infinity){
-  if (!text){ return 0; }
-  const words = text.split(/\s+/);
-  let line = '';
-  let lineCount = 0;
-  for (let i=0; i<words.length; i++){
-    const test = line ? line + ' ' + words[i] : words[i];
-    const w = ctx.measureText(test).width;
-    if (w <= maxWidth){
-      line = test;
-    } else {
-      ctx.fillText(line, x, y);
-      y += lineHeight;
-      lineCount++;
-      if (lineCount >= maxLines){
-        ctx.fillText('…', x, y);
-        return lineCount;
-      }
-      line = words[i];
-    }
-  }
-  if (line){
-    ctx.fillText(line, x, y);
-    lineCount++;
-  }
-  return lineCount;
-}
-function estimateLineCount(ctx, text, maxWidth){
-  if (!text) return 0;
-  const words = text.split(/\s+/);
-  let line = '';
-  let count = 0;
-  for (let i=0;i<words.length;i++){
-    const test = line ? line + ' ' + words[i] : words[i];
-    if (ctx.measureText(test).width <= maxWidth){
-      line = test;
-    } else {
-      count++; line = words[i];
-    }
-  }
-  if (line) count++;
-  return count;
-}
-
-// Improved sharing: try to share the generated image; fall back to text or download
-async function shareCurrent(){
-  if (!openedId) return;
-  const e = emails.find(x => x.id === openedId);
-  if (!e) return;
-
-  try {
-    const imgBlob = await generateShareImage(e);
-    const file = new File([imgBlob], 'reflection.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })){
-      await navigator.share({
-        title: 'Reflection',
-        text: e.title ? `“${e.title}”` : 'Reflection',
-        files: [file],
-      });
-      return;
-    }
-    // Fallback: download the image
-    const url = URL.createObjectURL(imgBlob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'reflection.png';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    // Also copy text to clipboard as extra fallback
-    try{ await navigator.clipboard.writeText(`Reflection\n\n${e.title ? e.title + '\n\n' : ''}${e.body || ''}`); }catch{}
-    alert('Saved share image as reflection.png (and copied text to clipboard) ✨');
-  } catch {
-    // Final fallback: text sharing
-    const text = `Reflection\n\n${e.title ? e.title + '\n\n' : ''}${e.body || ''}`;
-    if (navigator.share){
-      try { await navigator.share({ title: 'Reflection', text }); return; } catch {}
-    }
-    try { await navigator.clipboard.writeText(text); alert('Copied to clipboard ✨'); } catch { alert('Unable to share — try copying manually.'); }
-  }
-}
-
 async function deleteCurrent(){
   if (!openedId) return;
   if (!confirm('Gently release this letter into the night?')) return;
@@ -593,28 +360,11 @@ function updateOnlineUI(isOnline){
   $('#addPhotosBtn')?.toggleAttribute('disabled', !isOnline);
   $('#imageInput')?.toggleAttribute('disabled', !isOnline);
 }
-
-// Updated: only flash "Back online" briefly when we actually return from offline
 function handleConnectivityChange(){
-  const isOnline = navigator.onLine;
-  updateOnlineUI(isOnline);
+  const isOnline = navigator.onLine; updateOnlineUI(isOnline);
   const status = $('#composeStatus');
-
-  if (isOnline) {
-    closeOfflineModal();
-    if (lastOnline === false) {
-      // We were offline and just came back — flash briefly, then clear
-      flashStatus(status, 'Back online ✨', 'info', 2200);
-    } else {
-      // Clear any lingering status
-      if (status) status.textContent = '';
-    }
-  } else {
-    openOfflineModal();
-    sparkleStatus(status, 'Offline. Sending and photo uploads are disabled.', 'error');
-  }
-
-  lastOnline = isOnline;
+  if (isOnline){ closeOfflineModal(); if (status) sparkleStatus(status, 'Back online ✨'); }
+  else { openOfflineModal(); if (status) sparkleStatus(status, 'Offline. Sending and photo uploads are disabled.', 'error'); }
 }
 
 /* ---------- Compose ---------- */
@@ -889,7 +639,7 @@ function outsideCloseHandler(e){
 }
 function escCloseHandler(e){ if (e.key === 'Escape') closeCalendarDropdown(); }
 
-/* ---------- Credit flip ---------- */
+/* ---------- Credit flip — fix sizing + accessibility ---------- */
 function setupCreditFlip(){
   const btn = $('#creditLink'); if (!btn) return;
   const inner = btn.querySelector('.flip-inner');
@@ -911,7 +661,7 @@ function setupCreditFlip(){
   btn.addEventListener('click', (e)=>{ e.preventDefault(); toggle(); });
   btn.addEventListener('keydown', (ev)=>{ if (ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); toggle(); } });
 
-  // Auto unflip after a moment
+  // Auto unflip after a moment for better UX
   btn.addEventListener('transitionend', ()=>{
     if (btn.classList.contains('flipped')){
       setTimeout(()=>{ btn.classList.remove('flipped'); btn.setAttribute('aria-pressed','false'); btn.setAttribute('aria-expanded','false'); }, 2200);
