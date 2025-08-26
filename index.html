@@ -26,7 +26,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css" />
-  <!-- Add this line so the safe-area and loader overrides win -->
   <link rel="stylesheet" href="overrides.css" />
 </head>
 <body>
@@ -87,7 +86,6 @@
           <textarea id="mailBody" rows="8" class="diary-text" placeholder="Pour your heart out with glitter and grace..."></textarea>
         </label>
 
-        <!-- Photos uploader -->
         <div class="field">
           <span>Photos</span>
           <div class="image-controls">
@@ -113,19 +111,34 @@
 
     <section id="inboxPanel" class="panel">
       <div class="inbox-controls">
-        <button id="refreshBtn" class="btn small">Refresh ✨</button>
-        <span id="inboxStatus" class="status"></span>
+        <div class="left-controls">
+          <button id="toggleCalendarBtn" class="btn small" aria-expanded="false" aria-controls="calendarDropdown">📅 Calendar</button>
+          <button id="clearFilterBtn" class="btn small ghost" hidden>Clear date filter</button>
+          <span id="activeFilterChip" class="chip" hidden>
+            <span class="chip-text"></span>
+            <button id="chipClearBtn" class="chip-x" aria-label="Clear date filter">×</button>
+          </span>
+        </div>
+        <div class="right-controls">
+          <button id="refreshBtn" class="btn small">Refresh ✨</button>
+          <span id="inboxStatus" class="status"></span>
+        </div>
       </div>
 
-      <!-- Calendar card -->
-      <div class="card glass calendar-card" aria-label="Writing calendar">
+      <!-- Calendar Dropdown Panel -->
+      <div id="calendarDropdown" class="dropdown-panel glass" role="dialog" aria-modal="false" aria-labelledby="calTitle" hidden>
         <div class="cal-header">
-          <button id="calPrev" class="icon-btn" aria-label="Previous month">◀</button>
-          <div id="calTitle" class="cal-title" aria-live="polite">Month YYYY</div>
-          <div class="cal-actions">
+          <div class="nav">
+            <button id="calPrev" class="icon-btn" aria-label="Previous month">◀</button>
             <button id="calToday" class="btn small ghost">Today</button>
-            <button id="clearFilterBtn" class="btn small" hidden>Clear filter</button>
             <button id="calNext" class="icon-btn" aria-label="Next month">▶</button>
+          </div>
+          <div class="cal-title-wrap">
+            <div id="calTitle" class="cal-title" aria-live="polite">Month YYYY</div>
+            <div class="cal-pickers">
+              <select id="monthSelect" aria-label="Select month"></select>
+              <select id="yearSelect" aria-label="Select year"></select>
+            </div>
           </div>
         </div>
         <div class="cal-grid" id="calendarGrid" role="grid" aria-label="Calendar"></div>
@@ -151,7 +164,6 @@
     </section>
   </main>
 
-  <!-- Reader: keep default size -->
   <dialog id="readerModal" class="modal glass">
     <div class="modal-header">
       <h3 id="readerTitle">Title</h3>
@@ -165,7 +177,6 @@
     </div>
   </dialog>
 
-  <!-- Smaller, cleaner popups -->
   <dialog id="tokenModal" class="modal glass sm">
     <form method="dialog" id="tokenForm" class="token-form">
       <div class="modal-header">
@@ -229,12 +240,12 @@
   </dialog>
 
   <footer class="app-footer">
-    <p id="creditLink" class="flip" role="button" tabindex="0" aria-label="Credits" aria-pressed="false">
+    <button id="creditLink" class="flip" aria-label="Credits" aria-pressed="false" aria-expanded="false">
       <span class="flip-inner">
         <span class="front">&lt;/&gt; with 🪄 by Spandan.</span>
         <span class="back">An S² Labs Product</span>
       </span>
-    </p>
+    </button>
   </footer>
 
   <script src="app.js" type="module"></script>
