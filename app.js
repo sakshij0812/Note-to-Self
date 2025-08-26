@@ -22,6 +22,11 @@ let currentSha = null; // sha of the JSON file (if exists)
 let openedId = null; // track by id instead of index for safety
 let selectedImages = []; // images chosen for the next entry
 
+// New: calendar and filtering state
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-based
+let activeFilterDateKey = null; // 'YYYY-MM-DD'
+
 // Helpers
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -36,6 +41,22 @@ const decode64 = (b64) => {
 };
 const datePretty = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 const rawUrl = (path) => `https://raw.githubusercontent.com/${OWNER}/${REPO}/${encodeURIComponent(BRANCH)}/${path.split('/').map(encodeURIComponent).join('/')}`;
+
+// New: date helpers for local-day keys
+function pad2(n) { return String(n).padStart(2, '0'); }
+function dateKeyFromDate(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function dateKeyFromISO(iso) {
+  const d = new Date(iso);
+  return dateKeyFromDate(d);
+}
+function addDays(d, delta) {
+  const nd = new Date(d);
+  nd.setDate(nd.getDate() + delta);
+  return nd;
+}
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 // Token + name storage
 function loadToken() {
@@ -95,6 +116,7 @@ function getRandomGreeting(name) {
 function updateGreeting() {
   const el = $('#greetingTitle');
   if (el) el.textContent = getRandomGreeting(displayName);
+  // streak updates separately
 }
 
 // GitHub Contents API: get file
@@ -332,18 +354,26 @@ function sparkleStatus(el, msg, kind = 'info') {
   el.style.color = kind === 'error' ? '#ffb8c8' : '#ffd7ff';
 }
 
+// New: get filtered list for inbox rendering
+function getDisplayEmails() {
+  if (!activeFilterDateKey) return emails;
+  return emails.filter(e => dateKeyFromISO(e.createdAt || new Date().toISOString()) === activeFilterDateKey);
+}
+
 function renderInbox() {
   const grid = $('#inboxGrid');
   grid.innerHTML = '';
-  if (!emails.length) {
+  const listToRender = getDisplayEmails();
+
+  if (!listToRender.length) {
     grid.innerHTML = `
       <div class="card glass" style="padding:16px; text-align:center;">
-        <p>No letters yet. Your sky awaits its first sparkle 💖</p>
+        <p>No letters ${activeFilterDateKey ? 'on this day' : 'yet'}. Your sky awaits its first sparkle 💖</p>
       </div>`;
     return;
   }
   // Show most recent first
-  const list = [...emails].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const list = [...listToRender].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   const tpl = $('#cardTemplate');
 
   list.forEach((e, idx) => {
@@ -373,14 +403,18 @@ async function refreshInbox() {
   if (!navigator.onLine) {
     sparkleStatus(status, 'You are offline. Showing cached letters (if any).');
     renderInbox();
+    renderCalendar(); // still show using cached emails if present
+    updateStreakChip();
     return;
   }
   sparkleStatus(status, 'Calling friendly fireflies...');
   try {
     const res = await getEmailsFile();
-    emails = res.emails;
+    emails = res.emails || [];
     sparkleStatus(status, `Fetched ${emails.length} letters ✨`);
     renderInbox();
+    renderCalendar();
+    updateStreakChip();
   } catch (e) {
     sparkleStatus(status, e.message, 'error');
   }
@@ -437,6 +471,8 @@ async function deleteCurrent() {
     await putEmailsFile(after, 'chore: release a letter into the night 🌙');
     emails = after;
     renderInbox();
+    renderCalendar();
+    updateStreakChip();
     closeReader();
     sparkleTrail();
     sparkleStatus(composeStatus, 'Letter released with grace 🌙');
@@ -599,6 +635,8 @@ async function onSend() {
     await putEmailsFile(next, 'chore: add a magical letter 💌');
     emails = next;
     renderInbox();
+    renderCalendar();
+    updateStreakChip();
     sparkleStatus(status, 'Your letter is shining in the night sky ✨');
     sparkleTrail();
     // reset form
@@ -742,7 +780,146 @@ function showUpdateModal(reg) {
   else dlg.setAttribute('open', '');
 }
 
-// Init
+/* ---------- Calendar rendering and streak ---------- */
+
+// Build a Set of local date keys that have at least one entry
+function buildEntryDateSet() {
+  const set = new Set();
+  for (const e of emails) {
+    if (!e || !e.createdAt) continue;
+    set.add(dateKeyFromISO(e.createdAt));
+  }
+  return set;
+}
+
+function setCalendarTo(date) {
+  calYear = date.getFullYear();
+  calMonth = date.getMonth();
+}
+
+function renderCalendar() {
+  const titleEl = $('#calTitle');
+  const grid = $('#calendarGrid');
+  const clearBtn = $('#clearFilterBtn');
+  if (!titleEl || !grid) return;
+
+  // Title
+  titleEl.textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+  // Clear grid
+  grid.innerHTML = '';
+
+  // Weekday header (Sun..Sat)
+  const weekdayNames = Array.from({ length: 7 }, (_, i) =>
+    new Date(1970, 0, 4 + i).toLocaleDateString([], { weekday: 'short' })
+  );
+  for (const name of weekdayNames) {
+    const h = document.createElement('div');
+    h.className = 'cal-cell';
+    h.textContent = name;
+    h.setAttribute('role', 'columnheader');
+    grid.appendChild(h);
+  }
+
+  const firstOfMonth = new Date(calYear, calMonth, 1);
+  const startDow = firstOfMonth.getDay(); // 0..6 (Sun..Sat)
+  // Start from the Sunday of the week containing the 1st
+  const gridStart = addDays(firstOfMonth, -startDow);
+
+  const todayKey = dateKeyFromDate(new Date());
+  const entryDays = buildEntryDateSet();
+
+  // 6 weeks x 7 days = 42 cells
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(gridStart, i);
+    const isOtherMonth = d.getMonth() !== calMonth;
+    const key = dateKeyFromDate(d);
+    const hasEntry = entryDays.has(key);
+    const isToday = key === todayKey;
+    const isSelected = activeFilterDateKey === key;
+
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = `cal-day${isOtherMonth ? ' other-month' : ''}${hasEntry ? ' has-entry' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}`;
+    cell.setAttribute('role', 'gridcell');
+    cell.setAttribute('aria-label', `${d.toLocaleDateString([], { dateStyle: 'full' })}${hasEntry ? ' — has entry' : ''}${isToday ? ' — today' : ''}`);
+    cell.textContent = String(d.getDate());
+    cell.dataset.key = key;
+
+    cell.addEventListener('click', () => {
+      // If clicking a day from an adjacent month, jump calendar to that month
+      if (isOtherMonth) {
+        setCalendarTo(d);
+        // Apply filter to the clicked date too
+        setDateFilter(key);
+      } else {
+        // Toggle selection for same-day click
+        if (activeFilterDateKey === key) {
+          setDateFilter(null);
+        } else {
+          setDateFilter(key);
+        }
+      }
+    });
+
+    grid.appendChild(cell);
+  }
+
+  // Clear filter button visibility
+  clearBtn?.toggleAttribute('hidden', !activeFilterDateKey);
+}
+
+// Apply or clear date filter
+function setDateFilter(dateKeyOrNull) {
+  activeFilterDateKey = dateKeyOrNull;
+  // Render inbox with filter
+  renderInbox();
+  // Update status
+  const status = $('#inboxStatus');
+  if (activeFilterDateKey) {
+    const dt = new Date(activeFilterDateKey);
+    const friendly = dt.toLocaleDateString([], { dateStyle: 'full' });
+    sparkleStatus(status, `Showing entries for ${friendly}`);
+  } else {
+    sparkleStatus(status, `Showing ${emails.length} letters ✨`);
+  }
+  // Re-render calendar to reflect selection
+  renderCalendar();
+}
+
+// Compute and update streak chip on home screen
+function updateStreakChip() {
+  const chip = $('#streakChip');
+  if (!chip) return;
+
+  if (!emails.length) {
+    chip.hidden = true;
+    return;
+  }
+
+  const entryDays = buildEntryDateSet();
+  const today = new Date();
+  const todayKey = dateKeyFromDate(today);
+
+  // Current streak anchored to today
+  let streak = 0;
+  let cursor = new Date(today);
+  while (entryDays.has(dateKeyFromDate(cursor))) {
+    streak += 1;
+    cursor = addDays(cursor, -1);
+  }
+
+  // If no entry today, consider streak 0 (anchored to today)
+  if (streak === 0) {
+    chip.hidden = true;
+    return;
+  }
+
+  chip.textContent = `🔥 ${streak}-day streak`;
+  chip.hidden = false;
+}
+
+/* ---------- Init ---------- */
 window.addEventListener('DOMContentLoaded', () => {
   // Gentle 1s loader fade
   const loader = $('#loadingScreen');
@@ -794,6 +971,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateGreeting();
     closeTokenModal();
     if (magicToken) refreshInbox();
+    else updateStreakChip();
   });
 
   $('#sendBtn').addEventListener('click', onSend);
@@ -802,6 +980,25 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#closeReader').addEventListener('click', closeReader);
   $('#shareBtn').addEventListener('click', shareCurrent);
   $('#deleteBtn').addEventListener('click', deleteCurrent);
+
+  // Calendar controls
+  $('#calPrev')?.addEventListener('click', () => {
+    const d = new Date(calYear, calMonth, 1);
+    d.setMonth(d.getMonth() - 1);
+    setCalendarTo(d);
+    renderCalendar();
+  });
+  $('#calNext')?.addEventListener('click', () => {
+    const d = new Date(calYear, calMonth, 1);
+    d.setMonth(d.getMonth() + 1);
+    setCalendarTo(d);
+    renderCalendar();
+  });
+  $('#calToday')?.addEventListener('click', () => {
+    setCalendarTo(new Date());
+    renderCalendar();
+  });
+  $('#clearFilterBtn')?.addEventListener('click', () => setDateFilter(null));
 
   // Footer credit — flip to reveal note
   const credit = $('#creditLink');
@@ -828,4 +1025,14 @@ window.addEventListener('DOMContentLoaded', () => {
   handleConnectivityChange(); // set initial state
   window.addEventListener('online', handleConnectivityChange);
   window.addEventListener('offline', handleConnectivityChange);
+
+  // Initial calendar render (even before data)
+  setCalendarTo(new Date());
+  renderCalendar();
+  updateStreakChip();
+
+  // If we already have a token, fetch immediately
+  if (magicToken) {
+    refreshInbox();
+  }
 });

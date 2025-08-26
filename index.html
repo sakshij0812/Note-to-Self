@@ -75,6 +75,9 @@
     <section id="composePanel" class="panel active">
       <div class="card glass">
         <h2 id="greetingTitle">Welcome ✨</h2>
+        <div id="streakWrap" class="streak-wrap" aria-live="polite">
+          <span id="streakChip" class="streak-chip" hidden>🔥 0-day streak</span>
+        </div>
         <label class="field">
           <span>Title</span>
           <input id="mailTitle" type="text" placeholder="A tiny sparkle of thought..." maxlength="120" />
@@ -113,6 +116,26 @@
         <button id="refreshBtn" class="btn small">Refresh ✨</button>
         <span id="inboxStatus" class="status"></span>
       </div>
+
+      <!-- New: Calendar card -->
+      <div class="card glass calendar-card" aria-label="Writing calendar">
+        <div class="cal-header">
+          <button id="calPrev" class="icon-btn" aria-label="Previous month">◀</button>
+          <div id="calTitle" class="cal-title" aria-live="polite">Month YYYY</div>
+          <div class="cal-actions">
+            <button id="calToday" class="btn small ghost">Today</button>
+            <button id="clearFilterBtn" class="btn small" hidden>Clear filter</button>
+            <button id="calNext" class="icon-btn" aria-label="Next month">▶</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calendarGrid" role="grid" aria-label="Calendar"></div>
+        <div class="cal-legend">
+          <span class="dot has-entry"></span> has entry
+          <span class="dot today"></span> today
+          <span class="dot selected"></span> filtered date
+        </div>
+      </div>
+
       <div id="inboxGrid" class="masonry"></div>
       <template id="cardTemplate">
         <article class="note-card glass">
@@ -187,7 +210,7 @@
 
   <dialog id="updateModal" class="modal glass">
     <div class="modal-header">
-      <h3>Fresh Starlight Awaits ✨</h3>
+      <h3>A dawn awaits</h3>
       <button id="closeUpdate" class="icon-btn" aria-label="Close">✖️</button>
     </div>
     <article class="reader-body">

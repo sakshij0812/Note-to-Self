@@ -233,7 +233,7 @@ body{
 .panel.active{ display:block; }
 
 .card{ padding:14px; border-radius:18px; }
-h2{ margin:6px 0 12px; font-size:20px; }
+h2{ margin:6px 0 8px; font-size:20px; }
 
 /* Diary-inspired handwriting for entries */
 .diary-text,
@@ -473,3 +473,100 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
   from{ transform: translateY(8px) scale(0.99); opacity:0; }
   to{ transform: translateY(0) scale(1); opacity:1; }
 }
+
+/* ---------- Calendar styles ---------- */
+.calendar-card{ margin: 8px 0 14px; }
+.cal-header{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding: 2px 2px 8px;
+}
+.cal-title{
+  font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  color: color-mix(in srgb, var(--muted) 80%, #ffffff 20%);
+}
+.cal-actions{ display:flex; align-items:center; gap:8px; }
+.cal-grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 6px 2px 2px;
+}
+.cal-cell{
+  text-align:center;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 0;
+}
+.cal-day{
+  position: relative;
+  user-select:none;
+  border-radius: 10px;
+  padding: 8px 0;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--stroke);
+  color: var(--txt);
+  background: linear-gradient(180deg, color-mix(in srgb, #ffffff 45%, transparent), color-mix(in srgb, #ffffff 20%, transparent));
+}
+@media (prefers-color-scheme: dark){
+  .cal-day{
+    background: linear-gradient(180deg, color-mix(in srgb, #ffffff 14%, transparent), color-mix(in srgb, #ffffff 6%, transparent));
+  }
+}
+.cal-day.other-month{
+  opacity: .55;
+}
+.cal-day.has-entry{
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--lav) 40%, transparent) inset, 0 4px 12px rgba(169,139,255,0.18);
+  background-image:
+    radial-gradient(140px 60px at 85% -10%, rgba(169,139,255,0.25), transparent 60%),
+    radial-gradient(140px 60px at 15% 120%, rgba(246,167,217,0.20), transparent 60%),
+    var(--surface);
+}
+.cal-day.today{
+  outline: 2px dashed color-mix(in srgb, var(--aqua) 70%, transparent);
+  outline-offset: 2px;
+}
+.cal-day.selected{
+  border-color: color-mix(in srgb, var(--pink) 75%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pink) 45%, transparent) inset, 0 6px 16px rgba(246,167,217,0.25);
+}
+.cal-legend{
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted-2);
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+.cal-legend .dot{
+  display:inline-block; width: 10px; height:10px; border-radius:50%; margin-right: 6px; vertical-align: middle;
+  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, #ffffff 40%, transparent);
+}
+.cal-legend .dot.has-entry{ background: color-mix(in srgb, var(--lav) 50%, #ffffff 30%); }
+.cal-legend .dot.today{ background: color-mix(in srgb, var(--aqua) 55%, #ffffff 25%); }
+.cal-legend .dot.selected{ background: color-mix(in srgb, var(--pink) 55%, #ffffff 25%); }
+
+/* ---------- Streak chip ---------- */
+.streak-wrap{ margin: 0 0 6px; }
+.streak-chip{
+  display:inline-flex; align-items:center; gap:6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  color: #3b1a3f;
+  background: linear-gradient(90deg, #fff2e0, #ffe6f4 60%);
+  box-shadow: 0 6px 14px rgba(255, 180, 120, 0.18), inset 0 0 0 1px rgba(255,255,255,0.8);
+}
+@media (prefers-color-scheme: dark){
+  .streak-chip{
+    color: #2a0d20;
+    background: linear-gradient(90deg, #ffe1cc, #ffd7ee 60%);
+  }
+}
+.streak-chip .fire{ font-size: 16px; }
+
+/* Make calendar days nice on hover */
+.cal-day:hover{ filter: brightness(1.02); transform: translateY(0); }
+
+/* Make icon buttons slightly larger hit area in calendar header */
+.cal-header .icon-btn{ padding: 6px 8px; }
