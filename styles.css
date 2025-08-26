@@ -169,10 +169,12 @@ body{
 .app-header{
   position: relative; z-index: 1;
   padding: 22px 12px 4px; display:flex; justify-content:center;
+  transition: padding .25s ease;
 }
 .brand{
   display:flex; align-items:center; gap:12px; padding: 10px 14px;
   border-radius: 16px;
+  transition: transform .35s cubic-bezier(.2,.8,.2,1), padding .2s ease, border-radius .25s ease, background .25s ease, left .25s ease, top .25s ease, width .25s ease, box-shadow .25s ease;
 }
 .brand-mark{
   width:36px; height:36px; border-radius: 50%;
@@ -180,12 +182,56 @@ body{
   background: linear-gradient(135deg, var(--petal), var(--lav));
   color:#4d2d56; font-weight: 900;
   box-shadow: 0 8px 22px rgba(180,120,210,.22);
+  transition: width .25s ease, height .25s ease, font-size .25s ease, opacity .25s ease;
 }
 .brand-text h1{
   margin:0; font-family:'Comfortaa', system-ui, sans-serif; font-size: 20px; letter-spacing:.4px;
+  transition: font-size .25s ease, letter-spacing .25s ease;
 }
 .brand-text p{
   margin:0; color: var(--muted-2); font-size: 12px;
+  transition: color .25s ease, font-size .25s ease;
+}
+
+/* Floating, one-line brand on scroll */
+body.brand-floating .brand{
+  position: fixed;
+  top: calc(var(--safe-top, 0px) + 10px);
+  left: 12px;
+  right: auto;
+  transform: translate3d(0,0,0) scale(0.86);
+  padding: 8px 12px;
+  border-radius: 999px;
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  background: linear-gradient(180deg, color-mix(in srgb, #ffffff 78%, transparent), color-mix(in srgb, #ffffff 55%, transparent));
+  border: 1px solid color-mix(in srgb, var(--txt) 10%, transparent);
+  box-shadow: 0 12px 26px rgba(150,110,200,0.18);
+  z-index: 60;
+  max-width: min(92vw, 680px);
+}
+@media (prefers-color-scheme: dark){
+  body.brand-floating .brand{
+    background: color-mix(in srgb, #000000 55%, transparent);
+    border-color: color-mix(in srgb, #ffffff 18%, transparent);
+    box-shadow: 0 16px 34px rgba(0,0,0,0.45);
+  }
+}
+body.brand-floating .brand-mark{
+  width: 28px; height: 28px; font-size: 13px;
+}
+body.brand-floating .brand-text{
+  display:flex; gap:6px; align-items: baseline; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+body.brand-floating .brand-text h1{
+  font-size: 16px; letter-spacing:.2px;
+}
+body.brand-floating .brand-text p{
+  display:inline; font-size: 12px; color: var(--muted);
+}
+body.brand-floating .brand-text p::before{
+  content: "—"; margin: 0 6px 0 4px; color: var(--muted);
 }
 
 /* Glass */
@@ -376,7 +422,6 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
   background: linear-gradient(180deg, #ffffff, #f7efff);
   box-shadow: 0 8px 18px rgba(200,160,240,.22), inset 0 0 0 1px rgba(255,255,255,0.7);
   transition: transform .06s ease, filter .2s ease, box-shadow .2s ease;
-  margin-left: 0 !important;
 }
 .icon-chip:hover{ filter: brightness(1.03); }
 .icon-chip:active{ transform: translateY(1px) scale(0.995); }
@@ -575,7 +620,6 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
     linear-gradient(180deg, color-mix(in srgb, #fff 55%, transparent), transparent);
   border: 1px solid var(--paper-stroke);
 }
-/* polaroid-pin removed from markup for cleaner look */
 .note-thumb{
   width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
   border-radius: 14px; margin-bottom: 10px; border: 1px solid var(--stroke);

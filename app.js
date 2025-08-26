@@ -1,7 +1,3 @@
-// Hardcoded constellation (change in code if you like)
-/* Ensure the repo exists and your token has:
-   - Repository permissions → Contents: Read and write
-*/
 const OWNER = 'sakshij0812';
 const REPO = 'Note-to-Self-Data';
 const BRANCH = 'main';
@@ -669,6 +665,17 @@ function setupCreditFlip(){
   });
 }
 
+/* ---------- Brand float on scroll ---------- */
+function setupBrandFloat(){
+  const THRESHOLD = 40;
+  const apply = ()=>{
+    if (window.scrollY > THRESHOLD) document.body.classList.add('brand-floating');
+    else document.body.classList.remove('brand-floating');
+  };
+  apply();
+  window.addEventListener('scroll', apply, { passive: true });
+}
+
 /* ---------- Init ---------- */
 window.addEventListener('DOMContentLoaded', ()=>{
   // Loader fade
@@ -680,6 +687,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if (rememberedName) displayName = rememberedName;
 
   setupTabs(); setupCreditFlip(); setupSettings(); updateGreeting();
+  setupBrandFloat();
 
   if (!rememberedToken || !rememberedName) openTokenModal(false);
 
