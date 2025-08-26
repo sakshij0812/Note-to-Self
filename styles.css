@@ -105,6 +105,7 @@ body{
   transform: rotate(-18deg);
   animation: shoot 1000ms ease-out forwards;
   will-change: transform, opacity;
+  /* make sure it sits on top visually */
   filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(203,173,255,0.6)) drop-shadow(0 0 28px rgba(255,190,230,0.5));
 }
 .shooting-star::before{
@@ -150,6 +151,22 @@ body{
   animation: twinkle 6s ease-in-out infinite alternate;
 }
 @keyframes twinkle{ from{opacity:0.6} to{opacity:1} }
+
+/* Doodle sprinkles */
+.sprinkles{
+  position:absolute; inset:0; background-repeat: repeat;
+  opacity: .15; filter: blur(0.3px);
+}
+.s1{ background-image:
+  radial-gradient(4px 4px at 12% 16%, var(--petal), transparent 60%),
+  radial-gradient(3px 3px at 42% 26%, var(--butter), transparent 60%),
+  radial-gradient(3px 3px at 70% 72%, var(--mint), transparent 60%);
+}
+.s2{ background-image:
+  radial-gradient(4px 4px at 84% 12%, var(--lav), transparent 60%),
+  radial-gradient(3px 3px at 22% 82%, var(--rose), transparent 60%);
+  mix-blend-mode: screen;
+}
 
 /* Glass */
 .glass{
@@ -553,46 +570,3 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
 /* Subtle float-on-appear */
 .panel.active .card, .note-card, .modal { animation: popin .35s ease both; }
 @keyframes popin{ from{ transform: translateY(8px) scale(0.99); opacity:0; } to{ transform: translateY(0) scale(1); opacity:1; } }
-
-/* ----------------------------- */
-/* Cuter, smaller update modal   */
-/* ----------------------------- */
-.update-modal{
-  width: min(360px, 92vw) !important;
-}
-.update-modal .update-wrap{
-  position: relative;
-  padding: 12px 14px 14px;
-  text-align: center;
-}
-.update-modal .modal-close{
-  position: absolute; top: 8px; right: 8px;
-  width: 28px; height: 28px; border-radius: 10px;
-}
-.update-modal .update-emoji{
-  width: 44px; height: 44px; border-radius: 50%;
-  display: grid; place-items: center; margin: 2px auto 6px;
-  font-size: 20px; line-height: 1;
-  background: linear-gradient(135deg, var(--petal), var(--lav));
-  color: #3b2542;
-  box-shadow: 0 10px 22px rgba(180,140,220,.28), inset 0 1px 0 rgba(255,255,255,.7);
-}
-@media (prefers-color-scheme: dark){
-  .update-modal .update-emoji{
-    background: linear-gradient(135deg, #ffe1f3, #e6dfff);
-    color: #2a1730;
-    box-shadow: 0 10px 22px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.45);
-  }
-}
-.update-modal .update-title{
-  margin: 4px 0 2px; font-size: 16px; letter-spacing: .2px;
-}
-.update-modal .update-desc{
-  margin: 0 4px 10px; font-size: 13px; color: var(--muted);
-}
-.update-modal .update-actions{
-  display:flex; gap:8px; justify-content:center;
-}
-.update-modal .btn.small{
-  padding: 7px 10px; font-size: 12px; border-radius: 12px;
-}

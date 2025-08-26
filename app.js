@@ -1,3 +1,7 @@
+// Hardcoded constellation (change in code if you like)
+/* Ensure the repo exists and your token has:
+   - Repository permissions → Contents: Read and write
+*/
 const OWNER = 'sakshij0812';
 const REPO = 'Note-to-Self-Data';
 const BRANCH = 'main';
@@ -17,9 +21,6 @@ let emails = [];
 let currentSha = null;
 let openedId = null;
 let selectedImages = [];
-
-// Track last known connectivity to avoid spammy "Back online" messages
-let lastConnectivity = (typeof navigator !== 'undefined' ? navigator.onLine : true);
 
 // Calendar constraints: start Sep 2025, do not go back before it
 const MIN_CAL_YEAR = 2025;
@@ -218,16 +219,8 @@ function setupTabs(){
       tabs.forEach(b=>b.classList.remove('active')); btn.classList.add('active');
       const tab = btn.getAttribute('data-tab');
       $$('.panel').forEach(p=>p.classList.remove('active'));
-      if (tab === 'compose'){
-        $('#composePanel').classList.add('active');
-        updateGreeting();
-        closeCalendarDropdown();
-      }else{
-        $('#inboxPanel').classList.add('active');
-        refreshInbox();
-        // If user tries to view Library without identity, nudge them
-        if (!magicToken || !displayName) openTokenModal();
-      }
+      if (tab === 'compose'){ $('#composePanel').classList.add('active'); updateGreeting(); closeCalendarDropdown(); }
+      else { $('#inboxPanel').classList.add('active'); refreshInbox(); }
     });
   });
 }
@@ -282,10 +275,6 @@ async function refreshInbox(){
   if (!navigator.onLine){
     sparkleStatus(status, 'You are offline. Showing cached letters (if any).');
     renderInbox(); renderCalendar(); updateStreakChip(); return;
-  }
-  if (!magicToken){
-    sparkleStatus(status, 'Enter your Magic Key to fetch your letters ✨');
-    return;
   }
   sparkleStatus(status, 'Calling friendly fireflies...');
   try{
@@ -372,72 +361,21 @@ function updateOnlineUI(isOnline){
   $('#imageInput')?.toggleAttribute('disabled', !isOnline);
 }
 function handleConnectivityChange(){
-  const isOnline = navigator.onLine;
-  updateOnlineUI(isOnline);
-
+  const isOnline = navigator.onLine; updateOnlineUI(isOnline);
   const status = $('#composeStatus');
-
-  if (isOnline){
-    if (lastConnectivity === false && status){
-      sparkleStatus(status, 'Back online ✨');
-      const shownAt = Date.now();
-      setTimeout(()=>{
-        if (!status) return;
-        if (status.textContent.trim() === 'Back online ✨'){
-          status.textContent = '';
-        }
-      }, 2000);
-    }
-    closeOfflineModal();
-  } else {
-    if (status) sparkleStatus(status, 'Offline. Sending and photo uploads are disabled.', 'error');
-    openOfflineModal();
-  }
-
-  lastConnectivity = isOnline;
-}
-
-/* ---------- Identity prompt (Token + Name) ---------- */
-function openTokenModal(force=false){
-  const dlg = $('#tokenModal');
-  if (!dlg) return;
-  // If not forced, only open when missing identity
-  if (!force && magicToken && displayName) return;
-
-  const nameEl = $('#nameInput');
-  if (nameEl && displayName) nameEl.value = displayName;
-
-  if (typeof dlg.showModal === 'function') dlg.showModal();
-  else dlg.setAttribute('open','');
-
-  // Prevent escaping the modal until both are present
-  dlg.addEventListener('cancel', (e)=>{
-    if (!magicToken || !displayName) e.preventDefault();
-  }, { once:true });
-}
-function closeTokenModal(){
-  const dlg = $('#tokenModal');
-  if (!dlg) return;
-  if (typeof dlg.close==='function') dlg.close(); else dlg.removeAttribute('open');
-}
-function requireIdentity(){
-  if (!magicToken || !displayName){
-    openTokenModal();
-    return false;
-  }
-  return true;
+  if (isOnline){ closeOfflineModal(); if (status) sparkleStatus(status, 'Back online ✨'); }
+  else { openOfflineModal(); if (status) sparkleStatus(status, 'Offline. Sending and photo uploads are disabled.', 'error'); }
 }
 
 /* ---------- Compose ---------- */
 async function onSend(){
-  if (!requireIdentity()) return;
-
   const title = $('#mailTitle').value.trim();
   const body = $('#mailBody').value.trim();
   const status = $('#composeStatus');
 
   if (!navigator.onLine){ openOfflineModal(); sparkleStatus(status,'You are offline. Connect to the internet to send this note ✨','error'); return; }
   if (!title && !body && selectedImages.length===0){ sparkleStatus(status,'Write a little something lovely or add a photo first ✨','error'); return; }
+  if (!magicToken){ openTokenModal(true); sparkleStatus(status,'We need your Magic Key to send this note ✨','error'); return; }
 
   $('#sendBtn').disabled = true; sparkleStatus(status,'Preparing your letter…');
 
@@ -493,70 +431,20 @@ function updateImagePreviews(){
 }
 function clearSelectedImages(){ selectedImages=[]; updateImagePreviews(); }
 
-/* ---------- Token modal + Settings ---------- */
+/* ---------- Token modal ---------- */
+function openTokenModal(force=false){
+  const dlg = $('#tokenModal');
+  if (force || !magicToken || !displayName){
+    const nameEl = $('#nameInput'); if (nameEl && displayName) nameEl.value = displayName;
+    if (typeof dlg.showModal==='function') dlg.showModal(); else dlg.setAttribute('open','');
+  }
+}
+function closeTokenModal(){ const dlg = $('#tokenModal'); if (typeof dlg.close==='function') dlg.close(); else dlg.removeAttribute('open'); }
 function setupSettings(){
-  // Open settings
-  $('#settingsBtn')?.addEventListener('click', ()=>{ $('#settingsModal').showModal(); });
-
-  // Close settings
-  $('#closeSettings')?.addEventListener('click', ()=>{ $('#settingsModal').close(); });
-
-  // Re-enter token/name
-  $('#reenterTokenBtn')?.addEventListener('click', ()=>{
-    $('#settingsModal').close();
-    openTokenModal(true);
-  });
-
-  // Forget token
-  $('#forgetTokenBtn')?.addEventListener('click', ()=>{
-    if (confirm('Forget your Magic Key on this device?')){
-      forgetToken();
-      alert('Magic Key forgotten. You’ll be asked again next time ✨');
-      // Immediately prompt again for a smooth path
-      openTokenModal();
-    }
-  });
-
-  // Token modal: save button
-  $('#saveTokenBtn')?.addEventListener('click', (e)=>{
-    e.preventDefault();
-    const nameVal = $('#nameInput').value.trim();
-    const tokenVal = $('#tokenInput').value.trim();
-
-    const needName = !displayName;
-    const needToken = !magicToken;
-
-    if (needName && !nameVal){
-      alert('Please enter your name to personalize your space ✨');
-      return;
-    }
-    if (needToken && !tokenVal){
-      alert('Please enter your Magic Key to begin ✨');
-      return;
-    }
-
-    if (nameVal) saveName(nameVal);
-    if (tokenVal) saveToken(tokenVal);
-
-    updateGreeting();
-
-    // Clear inputs for security
-    $('#tokenInput').value = '';
-
-    closeTokenModal();
-
-    if (magicToken) refreshInbox(); else updateStreakChip();
-  });
-
-  // Token modal: X close — block if identity still missing
-  $('#closeToken')?.addEventListener('click', (e)=>{
-    e.preventDefault();
-    if (!magicToken || !displayName){
-      alert('Please enter your name and Magic Key to begin ✨');
-      return;
-    }
-    closeTokenModal();
-  });
+  $('#settingsBtn').addEventListener('click', ()=>{ $('#settingsModal').showModal(); });
+  $('#closeSettings').addEventListener('click', ()=>{ $('#settingsModal').close(); });
+  $('#reenterTokenBtn').addEventListener('click', ()=>{ $('#settingsModal').close(); openTokenModal(true); });
+  $('#forgetTokenBtn').addEventListener('click', ()=>{ if (confirm('Forget your Magic Key on this device?')){ forgetToken(); alert('Magic Key forgotten. You’ll be asked again next time ✨'); } });
 }
 
 /* ---------- SW update flow ---------- */
@@ -785,22 +673,20 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // Loader fade
   const loader = $('#loadingScreen'); setTimeout(()=>loader?.classList.add('hide'), 1000);
 
-  // Token + Name (load from storage)
+  // Token + Name
   const rememberedToken = loadToken(); const rememberedName = loadName();
   if (rememberedToken) magicToken = rememberedToken;
   if (rememberedName) displayName = rememberedName;
 
   setupTabs(); setupCreditFlip(); setupSettings(); updateGreeting();
 
-  // Prompt for identity right away if missing (after a frame so dialog is ready)
-  requestAnimationFrame(()=>{ if (!magicToken || !displayName) openTokenModal(); });
+  if (!rememberedToken || !rememberedName) openTokenModal(false);
+
+  // Token modal close via X
+  $('#closeToken')?.addEventListener('click', (e)=>{ e.preventDefault(); closeTokenModal(); });
 
   // Image picker events
-  $('#addPhotosBtn')?.addEventListener('click', ()=>{
-    if (!navigator.onLine){ openOfflineModal(); return; }
-    if (!requireIdentity()) return;
-    $('#imageInput').click();
-  });
+  $('#addPhotosBtn')?.addEventListener('click', ()=>{ if (!navigator.onLine){ openOfflineModal(); return; } $('#imageInput').click(); });
   $('#clearPhotosBtn')?.addEventListener('click', clearSelectedImages);
   $('#imageInput')?.addEventListener('change', (e)=>{
     const files = Array.from(e.target.files || []);
@@ -808,15 +694,22 @@ window.addEventListener('DOMContentLoaded', ()=>{
     selectedImages.push(...onlyImages); updateImagePreviews(); e.target.value='';
   });
 
+  $('#saveTokenBtn')?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const nameVal = $('#nameInput').value.trim();
+    const tokenVal = $('#tokenInput').value.trim();
+    if (nameVal) saveName(nameVal);
+    if (!magicToken && !tokenVal){ alert('Please enter your Magic Key to begin ✨'); return; }
+    if (tokenVal) saveToken(tokenVal);
+    updateGreeting(); closeTokenModal(); if (magicToken) refreshInbox(); else updateStreakChip();
+  });
+
   // Compose actions
   $('#sendBtn').addEventListener('click', onSend);
   $('#clearBtn').addEventListener('click', onClear);
 
   // Inbox actions
-  $('#refreshBtn').addEventListener('click', ()=>{
-    if (!magicToken){ openTokenModal(); return; }
-    refreshInbox();
-  });
+  $('#refreshBtn').addEventListener('click', refreshInbox);
   $('#chipClearBtn').addEventListener('click', ()=> setDateFilter(null));
   $('#clearFilterBtn').addEventListener('click', ()=> setDateFilter(null));
 

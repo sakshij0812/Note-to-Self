@@ -193,17 +193,33 @@
     </form>
   </dialog>
 
-  <!-- Cuter, smaller update dialog -->
-  <dialog id="updateModal" class="modal glass sm update-modal" aria-labelledby="updTitle" aria-describedby="updDesc">
-    <div class="update-wrap">
-      <button id="closeUpdate" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
-      <div class="update-emoji" aria-hidden="true">✨</div>
-      <h3 id="updTitle" class="update-title">Update ready</h3>
-      <p id="updDesc" class="update-desc">A tiny sprinkle is available. It takes just a second.</p>
-      <div class="update-actions">
-        <button id="updateLaterBtn" class="btn ghost small">Later</button>
-        <button id="updateNowBtn" class="btn primary small">Update now</button>
+  <dialog id="settingsModal" class="modal glass sm">
+    <div class="modal-header">
+      <h3>Magic Key ✨</h3>
+      <button id="closeSettings" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
+    </div>
+    <div class="settings-body modal-body">
+      <p class="soft">Manage your secret Magic Key (GitHub token) here.</p>
+      <div class="sep"></div>
+      <div class="grid2">
+        <button id="reenterTokenBtn" class="btn">Re-enter Magic Key / Name</button>
+        <button id="forgetTokenBtn" class="btn danger">Forget Magic Key</button>
       </div>
+      <p class="hint">Your secret lives only on this device. Re-enter or forget it anytime.</p>
+    </div>
+  </dialog>
+
+  <dialog id="updateModal" class="modal glass sm">
+    <div class="modal-header">
+      <h3>Fresh Starlight Awaits ✨</h3>
+      <button id="closeUpdate" class="icon-btn modal-close" aria-label="Close" title="Close">×</button>
+    </div>
+    <article class="reader-body modal-body">
+      <p>A new sprinkle of Reflections magic is ready. Update now or later?</p>
+    </article>
+    <div class="modal-footer">
+      <button id="updateLaterBtn" class="btn ghost">Later</button>
+      <button id="updateNowBtn" class="btn primary">Update now ✨</button>
     </div>
   </dialog>
 
