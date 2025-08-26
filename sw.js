@@ -1,4 +1,4 @@
-const CACHE = 'aurora-mailbox-v1.0.5';
+const CACHE = 'aurora-mailbox-v1.0.6';
 const ASSETS = [
   './',
   './index.html',
@@ -18,7 +18,7 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.map(k => (k !== CACHE && caches.delete(k)))))
+    caches.keys().then(keys => Promise.all(keys.map(k => (k !== CACHE && caches.delete(k 
   );
   self.clients.claim();
 });

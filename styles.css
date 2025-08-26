@@ -567,6 +567,34 @@ input:focus, textarea:focus{ border-color: var(--focus); box-shadow: 0 0 0 6px c
   box-shadow: 0 8px 20px rgba(255,210,240,0.20); border:1px solid var(--stroke);
 }
 
+/* Floating Action Button (streak) */
+.fab{
+  position: fixed;
+  right: 16px;
+  bottom: 18px;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(90deg, var(--petal), var(--lav) 60%, var(--mint));
+  color: #2b1330;
+  font-weight: 900;
+  box-shadow: 0 12px 26px rgba(190,150,230,.30), inset 0 0 0 1px rgba(255,255,255,0.85);
+  cursor: pointer;
+  transition: transform .06s ease, filter .2s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.fab:hover{ filter: brightness(1.03); }
+.fab:active{ transform: translateY(1px) scale(0.995); }
+.fab:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--focus) 45%, transparent), 0 12px 26px rgba(190,150,230,.30), inset 0 0 0 1px rgba(255,255,255,0.85);
+}
+.fab .fab-icon{ font-size: 1.1rem; line-height: 1; }
+.fab .fab-text{ font-weight: 900; letter-spacing: 0.2px; }
+
 /* Subtle float-on-appear */
 .panel.active .card, .note-card, .modal { animation: popin .35s ease both; }
 @keyframes popin{ from{ transform: translateY(8px) scale(0.99); opacity:0; } to{ transform: translateY(0) scale(1); opacity:1; } }

@@ -1,7 +1,3 @@
-// Hardcoded constellation (change in code if you like)
-/* Ensure the repo exists and your token has:
-   - Repository permissions → Contents: Read and write
-*/
 const OWNER = 'sakshij0812';
 const REPO = 'Note-to-Self-Data';
 const BRANCH = 'main';
@@ -593,13 +589,34 @@ function setDateFilter(dateKeyOrNull, closeAfter=false){
 }
 
 function updateStreakChip(){
-  const chip = $('#streakChip'); if (!chip) return;
-  if (!emails.length){ chip.hidden = true; return; }
+  const chip = $('#streakChip');
+  const fab = $('#streakFab');
+  const fabText = $('#streakFabText');
+
+  if (!emails.length){
+    if (chip) chip.hidden = true;
+    if (fab) fab.hidden = true;
+    return;
+  }
   const entryDays = buildEntryDateSet();
   let streak = 0; let cursor = new Date();
   while (entryDays.has(dateKeyFromDate(cursor))){ streak += 1; cursor = addDays(cursor,-1); }
-  if (streak===0){ chip.hidden = true; return; }
-  chip.textContent = `🔥 ${streak}-day streak`; chip.hidden = false;
+
+  if (streak === 0){
+    if (chip) chip.hidden = true;
+    if (fab) fab.hidden = true;
+    return;
+  }
+
+  if (chip){
+    chip.textContent = `🔥 ${streak}-day streak`;
+    chip.hidden = false;
+  }
+  if (fab && fabText){
+    fabText.textContent = `${streak}`;
+    fab.setAttribute('aria-label', `${streak}-day streak`);
+    fab.hidden = false;
+  }
 }
 
 /* ---------- Calendar dropdown behavior ---------- */
@@ -666,6 +683,18 @@ function setupCreditFlip(){
       setTimeout(()=>{ btn.classList.remove('flipped'); btn.setAttribute('aria-pressed','false'); btn.setAttribute('aria-expanded','false'); }, 2200);
     }
   });
+}
+
+/* ---------- Streak FAB behavior ---------- */
+function onStreakFabClick(){
+  // Ensure we're on the inbox so the calendar is available
+  const inboxPanel = $('#inboxPanel');
+  if (!inboxPanel.classList.contains('active')){
+    const inboxTab = document.querySelector('.tab[data-tab="inbox"]');
+    inboxTab?.click();
+  }
+  // Toggle the calendar dropdown for quick review of days
+  toggleCalendarDropdown();
 }
 
 /* ---------- Init ---------- */
@@ -742,6 +771,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   ensureOfflineModal(); handleConnectivityChange();
   window.addEventListener('online', handleConnectivityChange);
   window.addEventListener('offline', handleConnectivityChange);
+
+  // Streak FAB
+  $('#streakFab')?.addEventListener('click', onStreakFabClick);
 
   // Initial calendar state & streak
   setCalendarTo(MIN_CAL_DATE);
